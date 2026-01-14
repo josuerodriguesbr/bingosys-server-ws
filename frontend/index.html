@@ -1,115 +1,425 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BingoSys - Sorteio Ao Vivo</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="css/style.css">
-    
+
     <style>
-        .hero {
-            height: 100vh;
+        body {
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+
+        /* Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 1rem;
+            padding: 1rem;
+            min-height: 100vh;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1100px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow-y: visible;
+            }
+
+            .main-grid aside,
+            .main-grid main {
+                height: auto !important;
+                min-height: unset;
+            }
+
+            /* Order: Main Content -> Boa -> Ganhadores */
+            .main-grid main {
+                order: 1;
+            }
+
+            .main-grid aside:nth-of-type(1) {
+                order: 2;
+            }
+
+            .main-grid aside:nth-of-type(2) {
+                order: 3;
+            }
+
+            .ticket-list {
+                max-height: 300px !important;
+            }
+
+            .big-ball {
+                width: 60vw !important;
+                height: 60vw !important;
+                font-size: 20vw !important;
+            }
+
+            .admin-controls {
+                position: relative !important;
+                top: 0 !important;
+                right: 0 !important;
+                margin-bottom: 2rem;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Last Calls Bar */
+        .balls-history {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+        }
+
+        .ball {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            text-align: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
         }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50px;
-            font-size: 0.875rem;
+
+        .ball.last {
+            background: var(--warning);
+            color: #000;
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Current Call - The Big One */
+        .current-ball-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .big-ball {
+            width: 25vw;
+            height: 25vw;
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--accent-primary), #1e3a8a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 0 50px var(--accent-glow), inset 0 0 20px rgba(255, 255, 255, 0.3);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             margin-bottom: 1rem;
-            color: var(--text-secondary);
-        }
-        
-        .status-badge.connected {
-            color: var(--success);
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.2);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            padding: 2rem;
-            height: 100vh;
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
-        .header {
+        /* Lists */
+        .ticket-list {
+            list-style: none;
+            overflow-y: auto;
+            max-height: calc(100vh - 150px);
+        }
+
+        .ticket-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--radius-md);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 2rem;
-            background: var(--bg-glass);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-left: 4px solid var(--text-secondary);
+        }
+
+        .ticket-item.winner {
+            background: rgba(34, 197, 94, 0.2);
+            border-left-color: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .ticket-item.near-1 {
+            border-left-color: var(--warning);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+        }
+
+        /* Admin Controls */
+        .admin-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(5px);
+            align-items: center;
+        }
+
+        .input-manual {
+            width: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .more-badge {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-style: italic;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-top: 0.5rem;
+        }
+
+        .sorteio-id-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            border: 1px solid var(--accent-glow);
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 2px;
         }
     </style>
 </head>
+
 <body>
 
-    <div id="connection-screen" class="hero">
-        <div class="glass-panel" style="padding: 3rem; max-width: 400px;">
-            <div id="status-indicator" class="status-badge">Desconectado...</div>
-            <h1 style="margin-bottom: 1rem; font-size: 2.5rem;">BingoSys</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Sistema de Sorteio Ao Vivo</p>
-            
-            <button id="btn-enter" class="btn btn-primary" onclick="enterPanel()" disabled>
-                Aguardando Conexão...
-            </button>
-        </div>
-    </div>
+    <div class="main-grid">
+        <!-- Left: Near Wins (Good) -->
+        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+            <div class="section-title">Boa (Falta 1)</div>
+            <ul id="list-near-1" class="ticket-list" style="flex: 1;">
+                <!-- Items injected via JS -->
+            </ul>
+            <div id="more-near-1" class="more-badge" style="display: none;"></div>
+        </aside>
 
-    <div id="main-panel" style="display: none;">
-        <header class="header">
-            <h3>BingoSys <span style="font-weight: 300; opacity: 0.7;">Ao Vivo</span></h3>
-            <div id="server-status" style="color: var(--success); font-size: 0.8rem;">● Online</div>
-        </header>
-        
-        <main class="container" style="padding-top: 2rem;">
-            <!-- Placeholder content -->
-            <div class="glass-panel" style="padding: 2rem; text-align: center;">
-                <h2>Aguardando início do sorteio...</h2>
+        <!-- Center: Highlights -->
+        <main class="glass-panel" style="position: relative; overflow: hidden;">
+            <div class="current-ball-display">
+                <div
+                    style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                    Última Bola</div>
+                <div id="current-ball" class="big-ball">--</div>
+                <div id="sorteio-label" class="sorteio-id-box">SORTEIO AO VIVO</div>
             </div>
+
+            <!-- Bottom: History -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.3); padding: 1rem;">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary);">HISTÓRICO</div>
+                <div id="history-row" class="balls-history">
+                    <!-- Balls injected here -->
+                </div>
+            </div>
+
         </main>
+
+        <!-- Right: Winners -->
+        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+            <div class="section-title" style="color: var(--success); border-color: var(--success);">Ganhadores!</div>
+            <ul id="list-winners" class="ticket-list" style="flex: 1;">
+                <!-- Winners... -->
+            </ul>
+            <div id="more-winners" class="more-badge" style="display: none;"></div>
+        </aside>
     </div>
 
     <script src="js/socket.js"></script>
     <script>
-        const statusInd = document.getElementById('status-indicator');
-        const updateStatus = (connected) => {
-            const btn = document.getElementById('btn-enter');
-            if(connected) {
-                statusInd.textContent = "Conectado ao Servidor";
-                statusInd.classList.add('connected');
-                btn.textContent = "Entrar no Painel";
-                btn.removeAttribute('disabled');
+        // DOM Elements
+        const elCurrentBall = document.getElementById('current-ball');
+        const elHistory = document.getElementById('history-row');
+        const elListNear1 = document.getElementById('list-near-1');
+        const elListWinners = document.getElementById('list-winners');
+        const elMoreNear1 = document.getElementById('more-near-1');
+        const elMoreWinners = document.getElementById('more-winners');
+
+        // State
+        let drawnNumbers = [];
+        const MAX_NUMBER = 75;
+
+        // Socket Events
+        bingoSocket.on('connected', () => {
+            console.log('Painel conectado!');
+        });
+
+        bingoSocket.on('number_drawn', (data) => {
+            const num = data.number;
+            drawnNumbers.push(num);
+            updateDisplay(num);
+        });
+
+        bingoSocket.on('number_cancelled', (data) => {
+            const num = data.number;
+            // Remove do array
+            drawnNumbers = drawnNumbers.filter(n => n !== num);
+
+            // Remove do histórico visual (primeiro filho)
+            if (elHistory.firstChild) elHistory.removeChild(elHistory.firstChild);
+
+            // Atualiza a bola grande para a anterior
+            if (drawnNumbers.length > 0) {
+                const last = drawnNumbers[drawnNumbers.length - 1];
+                elCurrentBall.textContent = last < 10 ? '0' + last : last;
             } else {
-                statusInd.textContent = "Tentando conectar...";
-                statusInd.classList.remove('connected');
-                btn.textContent = "Conectando...";
-                btn.setAttribute('disabled', true);
+                elCurrentBall.textContent = "--";
             }
-        };
 
-        bingoSocket.on('connected', () => updateStatus(true));
-        bingoSocket.on('disconnected', () => updateStatus(false));
+            // Atualiza listas
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
+        });
 
-        function enterPanel() {
-            document.getElementById('connection-screen').style.display = 'none';
-            document.getElementById('main-panel').style.display = 'block';
-            bingoSocket.send('get_state'); // Exemplo
+        bingoSocket.on('game_update', (data) => {
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
+        });
+
+        bingoSocket.on('game_started', () => {
+            resetBoard();
+        });
+
+
+        function updateDisplay(number) {
+            // Update Big Ball
+            // Trigger animation reset
+            elCurrentBall.style.animation = 'none';
+            elCurrentBall.offsetHeight; /* trigger reflow */
+            elCurrentBall.style.animation = null;
+            elCurrentBall.textContent = number < 10 ? '0' + number : number;
+
+            // Add to history
+            const ball = document.createElement('div');
+            ball.className = 'ball animate-fade-in';
+            ball.textContent = number;
+            // Prepend
+            elHistory.insertBefore(ball, elHistory.firstChild);
+
+            // Limit to 8 items in history
+            while (elHistory.children.length > 8) {
+                elHistory.removeChild(elHistory.lastChild);
+            }
+        }
+
+        function updateWinners(winners) {
+            elListWinners.innerHTML = '';
+
+            // Mostrar apenas os 3 primeiros
+            const showCount = 3;
+            winners.slice(0, showCount).forEach(id => {
+                const li = document.createElement('li');
+                li.className = 'ticket-item winner animate-fade-in';
+                li.innerHTML = `<span>Cartela #${id}</span> <span>🏆</span>`;
+                elListWinners.appendChild(li);
+            });
+
+            // Indicador de mais itens
+            if (winners.length > showCount) {
+                elMoreWinners.textContent = `+ ${winners.length - showCount} GANHADORES`;
+                elMoreWinners.style.display = 'block';
+            } else {
+                elMoreWinners.style.display = 'none';
+            }
+        }
+
+        function updateNearWins(nearWins) {
+            // Focus on "1" missing
+            if (nearWins["1"]) {
+                const ids = nearWins["1"];
+                elListNear1.innerHTML = '';
+
+                const showCount = 3;
+                ids.slice(0, showCount).forEach(id => {
+                    const li = document.createElement('li');
+                    li.className = 'ticket-item near-1 animate-fade-in';
+                    li.innerHTML = `<span>Cartela #${id}</span> <span>Falta 1</span>`;
+                    elListNear1.appendChild(li);
+                });
+
+                if (ids.length > showCount) {
+                    elMoreNear1.textContent = `+ ${ids.length - showCount} CARTELAS BOA`;
+                    elMoreNear1.style.display = 'block';
+                } else {
+                    elMoreNear1.style.display = 'none';
+                }
+            }
+        }
+
+        function resetBoard() {
+            elCurrentBall.textContent = "--";
+            elHistory.innerHTML = "";
+            elListNear1.innerHTML = "";
+            elListWinners.innerHTML = "";
+            elMoreNear1.style.display = 'none';
+            elMoreWinners.style.display = 'none';
+            drawnNumbers = [];
         }
     </script>
 </body>
+
 </html>

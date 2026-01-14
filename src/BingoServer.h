@@ -17,6 +17,10 @@ public:
     ~BingoServer();
 
     bool start();
+    void loadTickets(const QVector<BingoTicket> &tickets);
+    void setSalesPath(const QString &path);
+    void loadSales();
+    void saveSales();
 
 private Q_SLOTS:
     void onNewConnection();
@@ -34,6 +38,7 @@ private:
     quint16 m_port;
     
     BingoGameEngine m_gameEngine;
+    QString m_salesPath;
 };
 
 #endif // BINGOSERVER_H

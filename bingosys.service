@@ -1,0 +1,14 @@
+[Unit]
+Description=BingoSys Server Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/bingosys
+ExecStart=/var/www/bingosys/bin/BingoSysServer 3000 /var/www/bingosys/data/base-cartelas.TXT
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

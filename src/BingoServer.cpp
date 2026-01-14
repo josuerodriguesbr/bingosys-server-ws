@@ -1,6 +1,8 @@
 #include "BingoServer.h"
 #include "BingoTicketParser.h"
 #include <QDebug>
+#include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -24,19 +26,48 @@ bool BingoServer::start()
     if (m_pWebSocketServer->listen(QHostAddress::Any, m_port)) {
         connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
                 this, &BingoServer::onNewConnection);
-        
-        // Carrega cartelas ao iniciar (Temporario para teste)
-        // Idealmente isso vem de um comando ou config
-        QString dataPath = "data/base-cartelas.txt";
-        // Ajuste path absoluto se necessario
-        dataPath = "d:/PROJETOS/bingosys-server-ws/data/base-cartelas.txt";
-        auto tickets = BingoTicketParser::parseFile(dataPath);
-        m_gameEngine.loadTickets(tickets);
-        m_gameEngine.setGameMode(0); // Default part 1
-        
         return true;
     }
     return false;
+}
+
+void BingoServer::loadTickets(const QVector<BingoTicket> &tickets)
+{
+    m_gameEngine.loadTickets(tickets);
+    m_gameEngine.setGameMode(0); // Default part 1
+}
+
+void BingoServer::setSalesPath(const QString &path)
+{
+    m_salesPath = path;
+}
+
+void BingoServer::loadSales()
+{
+    if (m_salesPath.isEmpty()) return;
+    QFile file(m_salesPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        int id = in.readLine().trimmed().toInt();
+        if (id > 0) m_gameEngine.registerTicket(id);
+    }
+    file.close();
+    qInfo() << "Vendas carregadas:" << m_gameEngine.getRegisteredCount();
+}
+
+void BingoServer::saveSales()
+{
+    if (m_salesPath.isEmpty()) return;
+    QFile file(m_salesPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
+
+    QTextStream out(&file);
+    for (int id : m_gameEngine.getRegisteredTickets()) {
+        out << id << "\n";
+    }
+    file.close();
 }
 
 void BingoServer::onNewConnection()
@@ -49,6 +80,30 @@ void BingoServer::onNewConnection()
 
     m_clients << pSocket;
     qInfo() << "Novo cliente conectado:" << pSocket->peerAddress().toString();
+
+    // Envia estado inicial para sincronizacao
+    QJsonObject sync;
+    sync["action"] = "sync_status";
+    sync["totalRegistered"] = m_gameEngine.getRegisteredCount();
+    
+    QJsonArray drawnArray;
+    for(int n : m_gameEngine.getDrawnNumbers()) drawnArray.append(n);
+    sync["drawnNumbers"] = drawnArray;
+
+    QJsonArray winnersArray;
+    for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
+    sync["winners"] = winnersArray;
+
+    QJsonObject nearWinObj;
+    auto nearWins = m_gameEngine.getNearWinTickets();
+    for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
+        QJsonArray idsInfo;
+        for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
+        nearWinObj[QString::number(it.key())] = idsInfo;
+    }
+    sync["near_wins"] = nearWinObj;
+
+    sendJson(pSocket, sync);
 }
 
 void BingoServer::processTextMessage(QString message)
@@ -115,24 +170,91 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             
             // Winners
             QJsonArray winnersArray;
-            for(int w : m_gameEngine.getWinners()) winnersArray.append(w);
+            for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
             updateMsg["winners"] = winnersArray;
             
-            // Near Win (vamos mandar apenas faltam 1 por enquanto para economizar banda se quiser)
-            // Ou mandar tudo estruturado
             QJsonObject nearWinObj;
             auto nearWins = m_gameEngine.getNearWinTickets();
-            
-            // Exemplo: "1": [id1, id2], "2": [id3...]
             for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
                 QJsonArray idsInfo;
-                for(int id : it.value()) idsInfo.append(id);
+                for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
                 nearWinObj[QString::number(it.key())] = idsInfo;
             }
             updateMsg["near_wins"] = nearWinObj;
             
             broadcastJson(updateMsg);
         }
+    }
+    else if (action == "undo_last") {
+        int cancelledNum = m_gameEngine.undoLastNumber();
+        if (cancelledNum != -1) {
+            QJsonObject broadcast;
+            broadcast["action"] = "number_cancelled";
+            broadcast["number"] = cancelledNum;
+            
+            // Winners e NearWins atualizados
+            QJsonArray winnersArray;
+            for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
+            broadcast["winners"] = winnersArray;
+
+            QJsonObject nearWinObj;
+            auto nearWins = m_gameEngine.getNearWinTickets();
+            for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
+                QJsonArray idsInfo;
+                for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
+                nearWinObj[QString::number(it.key())] = idsInfo;
+            }
+            broadcast["near_wins"] = nearWinObj;
+            
+            broadcastJson(broadcast);
+        }
+    }
+    else if (action == "register_ticket") {
+        int id = json["barcode"].toInt(); 
+        // No protocolo do bingo o codigo de barras pode ser o ID
+        // Vamos extrair o ID conforme a regra: barcode / 10 (remove o digito)
+        int ticketId = id / 10;
+        
+        m_gameEngine.registerTicket(ticketId);
+        
+        QJsonObject resp;
+        resp["action"] = "ticket_registered";
+        resp["ticketId"] = m_gameEngine.getFormattedBarcode(ticketId);
+        resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
+        broadcastJson(resp);
+        
+        saveSales();
+    }
+    else if (action == "register_random") {
+        int count = json["count"].toInt();
+        if (count <= 0) count = 10;
+        
+        // Pega IDs aleatórios da lista de cartelas carregadas
+        const QVector<BingoTicket> &all = m_gameEngine.getAllTickets();
+        if (!all.isEmpty()) {
+            for (int i = 0; i < count; ++i) {
+                int randomIndex = qrand() % all.size();
+                m_gameEngine.registerTicket(all[randomIndex].id);
+            }
+        }
+        
+        QJsonObject resp;
+        resp["action"] = "ticket_registered"; // Reusa a ação para atualizar o contador
+        resp["ticketId"] = 0; // 0 indica lote
+        resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
+        broadcastJson(resp);
+        
+        saveSales();
+    }
+    else if (action == "clear_sales") {
+        m_gameEngine.clearRegisteredTickets();
+        
+        QJsonObject resp;
+        resp["action"] = "sales_cleared";
+        resp["totalRegistered"] = 0;
+        broadcastJson(resp);
+        
+        saveSales();
     }
 }
 

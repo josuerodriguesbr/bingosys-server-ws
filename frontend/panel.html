@@ -9,29 +9,64 @@
 
     <style>
         body {
-            overflow: hidden;
-            /* Avoid scroll on TV screens if possible */
+            overflow-y: auto;
+            min-height: 100vh;
         }
 
+        /* Grid Layout */
         .main-grid {
             display: grid;
-            grid-template-columns: 350px 1fr 300px;
-            /* Sidebar | Main | Sidebar */
-            grid-template-rows: auto 1fr;
-            height: 100vh;
+            grid-template-columns: 320px 1fr 320px;
             gap: 1rem;
             padding: 1rem;
+            min-height: 100vh;
         }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
+        /* Mobile Responsiveness */
+        @media (max-width: 1100px) {
             .main-grid {
-                grid-template-columns: 250px 1fr;
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow-y: visible;
             }
 
-            .right-sidebar {
-                display: none;
-                /* Hide something or rearrange */
+            .main-grid aside,
+            .main-grid main {
+                height: auto !important;
+                min-height: unset;
+            }
+
+            /* Order: Main Content -> Boa -> Ganhadores */
+            .main-grid main {
+                order: 1;
+            }
+
+            .main-grid aside:nth-of-type(1) {
+                order: 2;
+            }
+
+            .main-grid aside:nth-of-type(2) {
+                order: 3;
+            }
+
+            .ticket-list {
+                max-height: 300px !important;
+            }
+
+            .big-ball {
+                width: 60vw !important;
+                height: 60vw !important;
+                font-size: 20vw !important;
+            }
+
+            .admin-controls {
+                position: relative !important;
+                top: 0 !important;
+                right: 0 !important;
+                margin-bottom: 2rem;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
             }
         }
 
@@ -122,7 +157,7 @@
         .ticket-list {
             list-style: none;
             overflow-y: auto;
-            max-height: calc(100vh - 100px);
+            max-height: calc(100vh - 150px);
         }
 
         .ticket-item {
@@ -159,6 +194,56 @@
                 box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
             }
         }
+
+        /* Admin Controls */
+        .admin-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(5px);
+            align-items: center;
+        }
+
+        .input-manual {
+            width: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .more-badge {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-style: italic;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-top: 0.5rem;
+        }
+
+        .sorteio-id-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            border: 1px solid var(--accent-glow);
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
     </style>
 </head>
 
@@ -166,19 +251,25 @@
 
     <div class="main-grid">
         <!-- Left: Near Wins (Good) -->
-        <aside class="glass-panel" style="padding: 1rem;">
+        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
             <div class="section-title">Boa (Falta 1)</div>
-            <ul id="list-near-1" class="ticket-list">
+            <ul id="list-near-1" class="ticket-list" style="flex: 1;">
                 <!-- Items injected via JS -->
             </ul>
+            <div id="more-near-1" class="more-badge" style="display: none;"></div>
         </aside>
 
         <!-- Center: Highlights -->
         <main class="glass-panel" style="position: relative; overflow: hidden;">
             <div class="current-ball-display">
-                <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 1rem;">ÚLTIMA BOLA</div>
+                <div
+                    style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                    Última Bola</div>
                 <div id="current-ball" class="big-ball">--</div>
-                <div style="font-size: 2rem; font-weight: 300; margin-top: 1rem;">Sorteio #1234</div>
+                <div id="sorteio-label" class="sorteio-id-box">PROVA #001</div>
+                <div id="playing-count"
+                    style="margin-top: 0.5rem; color: var(--success); font-size: 0.9rem; font-weight: 600;">0 CARTELAS
+                    EM JOGO</div>
             </div>
 
             <!-- Bottom: History -->
@@ -188,14 +279,34 @@
                     <!-- Balls injected here -->
                 </div>
             </div>
+
+            <!-- Admin Controls Overlay -->
+            <div class="admin-controls">
+                <a href="vendas.html"
+                    style="background: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; text-decoration: none; font-size: 0.8rem; margin-right: 1rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1.5rem;">REGISTRAR
+                    VENDAS</a>
+                <div
+                    style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1rem; margin-right: 0.5rem;">
+                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="75">
+                    <button onclick="drawManual()"
+                        style="background: var(--accent-primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600;">CONFIRMAR</button>
+                </div>
+                <button onclick="drawRandomNumber()"
+                    style="background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; margin-right: 0.5rem;">ALEATÓRIO</button>
+                <button onclick="undoLast()"
+                    style="background: var(--warning); color: #000; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-right: 0.5rem;">DESFAZER</button>
+                <button onclick="requestNewGame()"
+                    style="background: var(--danger); color: white; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem;">RESET</button>
+            </div>
         </main>
 
         <!-- Right: Winners -->
-        <aside class="glass-panel" style="padding: 1rem;">
+        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
             <div class="section-title" style="color: var(--success); border-color: var(--success);">Ganhadores!</div>
-            <ul id="list-winners" class="ticket-list">
+            <ul id="list-winners" class="ticket-list" style="flex: 1;">
                 <!-- Winners... -->
             </ul>
+            <div id="more-winners" class="more-badge" style="display: none;"></div>
         </aside>
     </div>
 
@@ -206,19 +317,81 @@
         const elHistory = document.getElementById('history-row');
         const elListNear1 = document.getElementById('list-near-1');
         const elListWinners = document.getElementById('list-winners');
+        const elMoreNear1 = document.getElementById('more-near-1');
+        const elMoreWinners = document.getElementById('more-winners');
+        const elManualInput = document.getElementById('manual-num');
 
         // State
         let drawnNumbers = [];
+        const MAX_NUMBER = 75;
 
         // Socket Events
         bingoSocket.on('connected', () => {
             console.log('Painel conectado!');
-            // Request full state if needed, or wait for next update
+        });
+
+        bingoSocket.on('sync_status', (data) => {
+            // Sincroniza vendas
+            const elPlaying = document.getElementById('playing-count');
+            if (elPlaying) elPlaying.textContent = data.totalRegistered + " CARTELAS EM JOGO";
+
+            // Sincroniza bolas
+            drawnNumbers = data.drawnNumbers || [];
+            elHistory.innerHTML = "";
+            drawnNumbers.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'history-ball';
+                ball.textContent = num < 10 ? '0' + num : num;
+                elHistory.insertBefore(ball, elHistory.firstChild);
+            });
+
+            if (drawnNumbers.length > 0) {
+                const last = drawnNumbers[drawnNumbers.length - 1];
+                elCurrentBall.textContent = last < 10 ? '0' + last : last;
+            } else {
+                elCurrentBall.textContent = "--";
+            }
+
+            // Sincroniza listas
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
         });
 
         bingoSocket.on('number_drawn', (data) => {
             const num = data.number;
+            drawnNumbers.push(num);
             updateDisplay(num);
+        });
+
+        bingoSocket.on('number_cancelled', (data) => {
+            const num = data.number;
+            // Remove do array
+            drawnNumbers = drawnNumbers.filter(n => n !== num);
+
+            // Remove do histórico visual (primeiro filho)
+            if (elHistory.firstChild) elHistory.removeChild(elHistory.firstChild);
+
+            // Atualiza a bola grande para a anterior
+            if (drawnNumbers.length > 0) {
+                const last = drawnNumbers[drawnNumbers.length - 1];
+                elCurrentBall.textContent = last < 10 ? '0' + last : last;
+            } else {
+                elCurrentBall.textContent = "--";
+            }
+
+            // Atualiza listas
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
+        });
+
+        bingoSocket.on('ticket_registered', (data) => {
+            const elPlaying = document.getElementById('playing-count');
+            if (elPlaying) elPlaying.textContent = data.totalRegistered + " CARTELAS EM JOGO";
+        });
+
+        bingoSocket.on('sales_cleared', (data) => {
+            const elPlaying = document.getElementById('playing-count');
+            if (elPlaying) elPlaying.textContent = "0 CARTELAS EM JOGO";
         });
 
         bingoSocket.on('game_update', (data) => {
@@ -229,6 +402,50 @@
         bingoSocket.on('game_started', () => {
             resetBoard();
         });
+
+        // Admin Actions
+        function requestNewGame() {
+            if (confirm("Deseja iniciar um novo jogo? Isso limpará o sorteio atual.")) {
+                bingoSocket.send("start_game");
+            }
+        }
+
+        function undoLast() {
+            if (drawnNumbers.length === 0) return;
+            if (confirm("Deseja cancelar a última bola sorteada (" + drawnNumbers[drawnNumbers.length - 1] + ")?")) {
+                bingoSocket.send("undo_last");
+            }
+        }
+
+        function drawRandomNumber() {
+            if (drawnNumbers.length >= MAX_NUMBER) {
+                alert("Todos os números já foram sorteados!");
+                return;
+            }
+
+            let num;
+            do {
+                num = Math.floor(Math.random() * MAX_NUMBER) + 1;
+            } while (drawnNumbers.includes(num));
+
+            bingoSocket.send("draw_number", { number: num });
+        }
+
+        function drawManual() {
+            const val = parseInt(elManualInput.value);
+            if (isNaN(val) || val < 1 || val > MAX_NUMBER) {
+                alert("Por favor, digite um número entre 1 e " + MAX_NUMBER);
+                return;
+            }
+
+            if (drawnNumbers.includes(val)) {
+                alert("Este número já foi sorteado!");
+                return;
+            }
+
+            bingoSocket.send("draw_number", { number: val });
+            elManualInput.value = '';
+        }
 
         function updateDisplay(number) {
             // Update Big Ball
@@ -248,12 +465,23 @@
 
         function updateWinners(winners) {
             elListWinners.innerHTML = '';
-            winners.forEach(id => {
+
+            // Mostrar apenas os 3 primeiros
+            const showCount = 3;
+            winners.slice(0, showCount).forEach(id => {
                 const li = document.createElement('li');
                 li.className = 'ticket-item winner animate-fade-in';
                 li.innerHTML = `<span>Cartela #${id}</span> <span>🏆</span>`;
                 elListWinners.appendChild(li);
             });
+
+            // Indicador de mais itens
+            if (winners.length > showCount) {
+                elMoreWinners.textContent = `+ ${winners.length - showCount} GANHADORES`;
+                elMoreWinners.style.display = 'block';
+            } else {
+                elMoreWinners.style.display = 'none';
+            }
         }
 
         function updateNearWins(nearWins) {
@@ -261,12 +489,21 @@
             if (nearWins["1"]) {
                 const ids = nearWins["1"];
                 elListNear1.innerHTML = '';
-                ids.forEach(id => {
+
+                const showCount = 3;
+                ids.slice(0, showCount).forEach(id => {
                     const li = document.createElement('li');
                     li.className = 'ticket-item near-1 animate-fade-in';
                     li.innerHTML = `<span>Cartela #${id}</span> <span>Falta 1</span>`;
                     elListNear1.appendChild(li);
                 });
+
+                if (ids.length > showCount) {
+                    elMoreNear1.textContent = `+ ${ids.length - showCount} CARTELAS BOA`;
+                    elMoreNear1.style.display = 'block';
+                } else {
+                    elMoreNear1.style.display = 'none';
+                }
             }
         }
 
@@ -275,6 +512,9 @@
             elHistory.innerHTML = "";
             elListNear1.innerHTML = "";
             elListWinners.innerHTML = "";
+            elMoreNear1.style.display = 'none';
+            elMoreWinners.style.display = 'none';
+            drawnNumbers = [];
         }
     </script>
 </body>

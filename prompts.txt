@@ -1,5 +1,5 @@
 Me responda em portugues do brasil.
-Quero criar um servidor web socket para rodar numa VPS que roda ubuntu 20.04
+Quero criar um servidor web socket para rodar numa VPS que roda ubuntu 24.04
 A função desse servidor vai ser dá suporte  ao sorteios de bingo numa página web.
 A pagina web vai ser o front end.
 As funções do projeto:
@@ -73,3 +73,25 @@ Sobre o ambiente do sistema:
  Eu até tenho  a IDE do qt creator instaladas  aqui numa maquina windows e numa maquina liux, mas acho que não vai ser necessário já que vamos tratar somente com a programação em linha no qt creator, não vamos mexer com interface gráfica no qt creator.
  
  Me diga se a amplitudo desse projeto é complicada para você gerar e como podemos proceder.
+
+
+
+=======================================================================================================================================================
+
+Agora que já temos o projeto no repositorio publico vamos colocar o projeto na VPS
+Na VPS temos o site https://vendasys.com.brasilE eu gostaria que o usuário acessace essse projeto assim: https://sorteio.vendasys.com.br  ou se você tiver outra opção melhor para o acesso. Eu pensei nesse tipo de acesso porque vendasys.com.br é uma plataforma de serviços web e esse projeto em que esstamos vai ser um dos serviços oferecidos pela plataforma vendasys.com.br
+Acesso ssh à VPS:
+IP: 77.37.43.109
+senha: RootJRP@2026
+Um detalhe importante, eu ainda não instalei o qt creator na versão adequada para o ubuntu 24.04 na VPS, então temos que verificar se já tem uma veresão do atq creator que compile nosso servidor e se não existir temos que instalar um.
+
+
+=======================================================================================================================================================
+
+Olá, nós estávamos configurando o sub-dominio  para nosso site na nossa VPS
+Acesso ssh à VPS:
+IP: 77.37.43.109
+senha: RootJRP@2026
+
+Você estava no meio do caminho quando ocorreu um erro em você, em sua IDE e você paralisou.
+Por algum motivo você já paralizou e tive que lhe reiniciar já 3 vezes, analise logo  o que está acontecendo ao tentar configurar o sub-dominio https://sorteio;vendasys.com.br

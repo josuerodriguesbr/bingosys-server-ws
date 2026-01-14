@@ -29,11 +29,25 @@ public:
     void setGameMode(int gridIndex);
 
     // Inicia um novo sorteio (limpa estado)
+    // Se houver cartelas registradas, usa apenas elas.
     void startNewGame();
+
+    // Gestão de Vendas (Cartelas Registradas)
+    void registerTicket(int ticketId);
+    void unregisterTicket(int ticketId);
+    void clearRegisteredTickets();
+    int getRegisteredCount() const { return m_registeredTickets.size(); }
+    bool isTicketRegistered(int ticketId) const { return m_registeredTickets.contains(ticketId); }
+    QSet<int> getRegisteredTickets() const { return m_registeredTickets; }
+    const QVector<BingoTicket>& getAllTickets() const { return m_allTickets; }
+    QString getFormattedBarcode(int ticketId) const;
 
     // Processa um numero sorteado
     // Retorna true se houver novidades (novos ganhadores ou armados)
     bool processNumber(int number);
+
+    // Cancela a ultima bola sorteada
+    int undoLastNumber();
 
     // Getters para estado atual
     QList<int> getDrawnNumbers() const;
@@ -52,6 +66,9 @@ private:
     // Cache de vencedores e armados para acesso rapido
     QList<int> m_winners;
     QMap<int, QList<int>> m_nearWins; // Key: 1 (falta 1), 2 (falta 2), etc.
+
+    QSet<int> m_registeredTickets; // IDs das cartelas vendidas
+    QHash<int, int> m_idToDigit;   // Mapa de ID -> Digito Verificador
 };
 
 #endif // BINGOGAMEENGINE_H

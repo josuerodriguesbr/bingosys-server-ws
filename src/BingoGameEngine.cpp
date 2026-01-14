@@ -8,6 +8,10 @@ BingoGameEngine::BingoGameEngine(QObject *parent) : QObject(parent), m_currentGr
 void BingoGameEngine::loadTickets(const QVector<BingoTicket> &tickets)
 {
     m_allTickets = tickets;
+    m_idToDigit.clear();
+    for(const auto& t : m_allTickets) {
+        m_idToDigit.insert(t.id, t.checkDigit);
+    }
     qInfo() << "GameEngine: Carregadas" << m_allTickets.size() << "cartelas na memoria.";
 }
 
@@ -26,6 +30,11 @@ void BingoGameEngine::startNewGame()
 
     // Inicializa o estado das cartelas para o modo de jogo atual
     for (const auto &ticket : m_allTickets) {
+        // Filtro: Se houver cartelas registradas, ignore as não registradas
+        if (!m_registeredTickets.isEmpty() && !m_registeredTickets.contains(ticket.id)) {
+            continue;
+        }
+
         if (m_currentGridIndex >= ticket.grids.size()) {
             qWarning() << "Cartela" << ticket.id << "nao possui grade no indice" << m_currentGridIndex;
             continue;
@@ -101,6 +110,60 @@ bool BingoGameEngine::processNumber(int number)
     return hasUpdates;
 }
 
+int BingoGameEngine::undoLastNumber()
+{
+    if (m_drawnNumbers.isEmpty()) {
+        return -1;
+    }
+
+    int lastNum = m_drawnNumbers.takeLast();
+
+    // Itera sobre as cartelas ativas para desfazer o ponto
+    for (auto it = m_activeTickets.begin(); it != m_activeTickets.end(); ++it) {
+        TicketState &state = it.value();
+
+        // Verifica se esta cartela possui o numero que estamos cancelando
+        // Precisamos verificar na m_allTickets original se o numero existe naquela grade
+        // Mas podemos simplesmente ver se o numero NÃO está no state.missingNumbers
+        // E se ele faz parte da grade original. 
+        // Como o load de tickets é estático, podemos buscar na m_allTickets:
+        const QVector<int> &grid = m_allTickets[state.ticketId - 1].grids[m_currentGridIndex];
+        
+        if (grid.contains(lastNum)) {
+            // Se o numero estava na grade e não está no missing, significa que foi marcado
+            if (!state.missingNumbers.contains(lastNum)) {
+                state.missingNumbers.insert(lastNum);
+                int oldMatches = state.matches;
+                state.matches--;
+                
+                int newMissingCount = state.missingNumbers.size(); // que é matches_originais+1? nao, total-matches
+                
+                // Se ela era vencedora, remove de winners
+                if (oldMatches == state.totalNumbers) {
+                    m_winners.removeAll(state.ticketId);
+                }
+
+                // Atualiza nearWins
+                // Se agora falta 1, ela veio do Winner.
+                // Se agora falta 2, ela veio do bucket 1.
+                // Se agora falta 3, ela veio do bucket 2.
+                // Se agora falta 4, ela sai do bucket 3.
+                
+                if (newMissingCount == 1) {
+                    m_nearWins[1].append(state.ticketId);
+                } else if (newMissingCount <= 3) {
+                    m_nearWins[newMissingCount - 1].removeAll(state.ticketId);
+                    m_nearWins[newMissingCount].append(state.ticketId);
+                } else if (newMissingCount == 4) {
+                    m_nearWins[3].removeAll(state.ticketId);
+                }
+            }
+        }
+    }
+
+    return lastNum;
+}
+
 QList<int> BingoGameEngine::getDrawnNumbers() const
 {
     return m_drawnNumbers;
@@ -114,4 +177,26 @@ QList<int> BingoGameEngine::getWinners() const
 QMap<int, QList<int>> BingoGameEngine::getNearWinTickets() const
 {
     return m_nearWins;
+}
+
+void BingoGameEngine::registerTicket(int ticketId)
+{
+    m_registeredTickets.insert(ticketId);
+}
+
+void BingoGameEngine::unregisterTicket(int ticketId)
+{
+    m_registeredTickets.remove(ticketId);
+}
+
+void BingoGameEngine::clearRegisteredTickets()
+{
+    m_registeredTickets.clear();
+}
+
+QString BingoGameEngine::getFormattedBarcode(int ticketId) const
+{
+    int digit = m_idToDigit.value(ticketId, 0);
+    // Formato: 6 digitos para ID + 1 digito para CD = 7 total
+    return QString("%1%2").arg(ticketId, 6, 10, QChar('0')).arg(digit);
 }

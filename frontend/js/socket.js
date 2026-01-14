@@ -71,7 +71,17 @@ class BingoSocket {
 const getServerUrl = () => {
     // Se estiver rodando local file, assume localhost:3000
     if (window.location.protocol === 'file:') return 'ws://localhost:3000';
-    return 'ws://' + window.location.hostname + ':3000';
+
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const host = window.location.host;
+
+    // Se estiver em produção (vendasys.com.br), usa a subpasta configurada no proxy do Apache
+    if (host.includes('vendasys.com.br')) {
+        return protocol + host + '/sorteio/ws';
+    }
+
+    // Fallback para desenvolvimento (usando IP ou localhost na porta 3000)
+    return protocol + window.location.hostname + ':3000';
 };
 
 const bingoSocket = new BingoSocket(getServerUrl());

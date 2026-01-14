@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QDebug>
+#include <QFileInfo>
 #include "BingoServer.h"
 #include "BingoTicketParser.h"
 #include "BingoGameEngine.h"
@@ -9,19 +10,24 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     // Porta padrão 3000 ou via argumento
+    // Porta padrão 3000 ou via argumento
     quint16 port = 3000;
     
-    qInfo() << "Iniciando BingoSys Server...";
+    if (argc > 1) {
+        port = QString(argv[1]).toUShort();
+    }
 
-    // --- TESTE DE PARSER ---
-    // Ajuste o caminho para ser relativo ou absoluto conforme necessidade de teste
-    // Na VPS o path sera outro, mas aqui assumiremos relativo ao executavel ou fixo para dev
-    QString dataPath = "data/base-cartelas.txt"; 
-    // Se estiver rodando do build dir, pode precisar ajustar "../data/..."
-    // Vamos tentar um path absoluto baseada na estrutura de projeto para garantir no dev
-    dataPath = "d:/PROJETOS/bingosys-server-ws/data/base-cartelas.txt";
+    qInfo() << "Iniciando BingoSys Server na porta" << port << "...";
 
-    qInfo() << "Testando carga de cartelas de:" << dataPath;
+    // --- CARGA DE CARTELAS ---
+    // Na VPS o path será relativo ao executável ou no diretório data padrão
+    QString dataPath = "data/base-cartelas.TXT"; 
+    
+    if (argc > 2) {
+        dataPath = argv[2];
+    }
+
+    qInfo() << "Tentando carregar cartelas de:" << dataPath;
     auto tickets = BingoTicketParser::parseFile(dataPath);
     qInfo() << "Cartelas carregadas:" << tickets.size();
     
@@ -60,6 +66,13 @@ int main(int argc, char *argv[])
     // ----------------------------
 
     BingoServer server(port);
+    server.loadTickets(tickets); // Passa as cartelas carregadas para o servidor
+    
+    // Configura persistencia de vendas
+    QString salesPath = QFileInfo(dataPath).absolutePath() + "/sold-tickets.TXT";
+    server.setSalesPath(salesPath);
+    server.loadSales();
+    
     if (!server.start()) {
         qCritical() << "Falha ao iniciar o servidor na porta" << port;
         return 1;

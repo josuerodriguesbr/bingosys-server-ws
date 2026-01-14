@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Registro de Vendas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .vendas-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-primary);
+        }
+
+        .barcode-input {
+            width: 100%;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--accent-primary);
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 2rem;
+            text-align: center;
+            font-family: monospace;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .barcode-input:focus {
+            outline: none;
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .recent-list {
+            list-style: none;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-md);
+            height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .recent-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-10px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-clear {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="vendas-container">
+        <div class="header">
+            <h1 class="section-title" style="margin:0; border:0;">Registro de Vendas</h1>
+            <a href="panel.html" style="color: var(--text-secondary); text-decoration: none;">← Voltar ao Painel</a>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div style="color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem;">Cartelas
+                    Registradas</div>
+                <div id="total-count" class="stat-value">0</div>
+            </div>
+            <div class="stat-card">
+                <div style="color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem;">Última Cartela
+                </div>
+                <div id="last-ticket" class="stat-value" style="color: var(--success);">---</div>
+            </div>
+        </div>
+
+        <div class="glass-panel" style="padding: 2rem;">
+            <div style="margin-bottom: 1rem; text-align: center; color: var(--text-secondary);">
+                Aponte o leitor de código de barras ou digite o número:
+            </div>
+            <input type="text" id="barcode-input" class="barcode-input" placeholder="0000000" autofocus
+                autocomplete="off">
+        </div>
+
+        <div class="glass-panel" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="color: var(--text-secondary); font-weight: 600;">LOG DE REGISTROS</span>
+                <div>
+                    <button onclick="addRandom(100)"
+                        style="background: var(--accent-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white; margin-right: 0.5rem;">+
+                        100 TESTE</button>
+                    <button onclick="clearSales()" class="btn-clear"
+                        style="background: var(--danger); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white;">LIMPAR
+                        TUDO</button>
+                </div>
+            </div>
+            <ul id="recent-log" class="recent-list">
+                <!-- Log items -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script>
+        const input = document.getElementById('barcode-input');
+        const elTotal = document.getElementById('total-count');
+        const elLast = document.getElementById('last-ticket');
+        const elLog = document.getElementById('recent-log');
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const val = input.value.trim();
+                if (val) {
+                    // Envia para o servidor
+                    bingoSocket.send("register_ticket", { barcode: parseInt(val) });
+                    input.value = '';
+                }
+            }
+        });
+
+        // Foco constante no input para o leitor de código de barras
+        document.addEventListener('click', () => input.focus());
+
+        bingoSocket.on('sync_status', (data) => {
+            elTotal.textContent = data.totalRegistered;
+        });
+
+        bingoSocket.on('ticket_registered', (data) => {
+            elTotal.textContent = data.totalRegistered;
+            elLast.textContent = '#' + data.ticketId;
+
+            const li = document.createElement('li');
+            li.className = 'recent-item';
+            li.innerHTML = `<span>Cartela #${data.ticketId}</span> <span style="color: var(--success);">OK</span>`;
+            elLog.insertBefore(li, elLog.firstChild);
+
+            // Som de sucesso se houver? (Opcional)
+        });
+
+        bingoSocket.on('sales_cleared', (data) => {
+            elTotal.textContent = '0';
+            elLast.textContent = '---';
+            elLog.innerHTML = '';
+            alert('Vendas limpas!');
+        });
+
+        function clearSales() {
+            if (confirm("Deseja LIMPAR todas as cartelas registradas? Isse não pode ser desfeito.")) {
+                bingoSocket.send("clear_sales");
+            }
+        }
+
+        function addRandom(n) {
+            bingoSocket.send("register_random", { count: n });
+        }
+    </script>
+</body>
+
+</html>
