@@ -1,0 +1,75 @@
+Me responda em portugues do brasil.
+Quero criar um servidor web socket para rodar numa VPS que roda ubuntu 20.04
+A função desse servidor vai ser dá suporte  ao sorteios de bingo numa página web.
+A pagina web vai ser o front end.
+As funções do projeto:
+Registrar as cartelas vendidas (precisaremos apenas que seja registrado um codigo de barras)
+Acompanhar a chamada dos números na hora do sorteio 
+Mostrar  estantaneamente os numeros chamados num painel ao vivo
+Mostrar cartelas que faltam 3, 2, 1 ponto para ganhar
+Mostrar cartelas ganhadoras
+O layout do front-end tem que ser super responsivo e elegante.
+O sistema pode utilizar um banco de dados  ou arquivos json para salvar cada acompanhamento de sorteio, sendo que pode acontecer de ocorrer vários sorteios simuntaneos.
+As cartelas que serão utilizadas pelo sistema são geradas  num padrão, e esse padrão vamos aproveitar para  ese sistema de acompanhamento de sorteios.
+Veja umas 5 linhas do arquivo de dados que geram as carteelas
+
+0000019-011012151922343536374246535558-0103060914171923272931333536414453575960-030508202125334042525459656775-02040506111719202126313435414446505354556568697072-030912172123354045465459697887-04112830404349546773-1225414672-1011121523-0407091011141516202223243132343644464849-0121304147-08254146610222375669063035498305203159810723384775
+0000027-030609151823272830404148495056-0204051012151619202128303639474950515556-020415262930373943474956657374-05081012152022232427323340434546484950526162697175-010412132526334243555664677889-01082024364451587074-0221374974-1219202629-0304050610111319252728293033373841434450-1013252835-02184160880816314972032040516205213957801422425090
+0000035-070811151724272931384446535459-0407111415161822242530353840424445545759-091314192325324144465455626372-01060811131619222526323639414247505456586364677074-051419223437444652596468788386-11131921353848517073-0519404569-0607151626-0103040912141618222426273132364041444748-0608313643-13163846751129435477042135488202234049831230425385
+0000043-020412141922343536374145495558-0305070912131921232627283132434647485060-010415212829334345535657647074-02050607152022232728323437404553545557606668697375-010713202228323548606162768081-01072629344445466065-0717415074-0315162127-0102081011131720232425303137383945464950-0408101938-14263748790820335170132839537611243160850219425268
+0000051-020611131421263031394447535657-0105060709101516182226333536424549525658-080914161924323942474856646772-04091113141923252930363738394446475457596267707174-030413152226343749505253677382-10121619334148546370-0328364664-0210162026-0206080911121315202122293134353641424547-0126333646-04254252821430454673062333496407223855790329434878
+
+A primeria parte por exemplo: 0000019
+É a cartela  000001 e seu digito verificador 9
+
+Essa segunda parte  por exemplo: 011012151922343536374246535558  São as combinações  o globo com 60 numeros e a grade de combinações na cartela com 15 dezenas
+
+As outras partes que se seguem possuem o mesmo padrão, variando a quantidade de bolas no globo e a quantidade de dezenas na grade de combinação nas cartelas.
+
+Então o sistema deve sempre saber antes de tudo com que parte da linha de dados está trabalhando, podemos definir um padrão para designar cada parte por exemplo:
+
+Um sorteio poderia está considerando 25x75 que seria um sorteio com um globo com 75 numeros e a grade de combinações na cartela com 25 dezenas 
+então poderiamos ter:
+parte 1 da linha de dados: 15x60
+parte 2 da linha de dados: 20x60
+parte 3 da linha de dados: 15x75
+parte 4 da linha de dados: 25x75
+
+Acho que já deu pra exemplificar bem como funciona as linhas de dados do arquivo de dados que o sistema vai utilizar, esse arquivo é um simples arquivo TXT
+
+As cartelas que forem vendidas serão registradas num banco de dados ou arquivo json, esse arquivo basicamente vai ter o codidgo de barras da cartela que é semelhante à primeira parte da linha de dados.
+
+E só serão consideeradas para o sorteio as linhas de dados correspondente às cartelas que foram registradas como vendidas. E pode ser interessante que no arquivo json ou banco de dados que vai registrar as cartelas vendidas, tenha uma copia da linha de dados correpondente, se for a melhor opção.
+
+Vamos ver o que acontece na chamaada de um número pelo locutos do sorteio:
+
+1 - O locutor chama um numero, ou um número sai de um sistema de sorteios aleatório automático.
+2 - O sistema pega esse numero chamados
+3 - O sistema já sabendo qual o padrão está sendo utilizado no sorteio por exemplo: 25x75, então procura se existe a dezena correspondente ao numero chamado na parte que corresponde ao padrão 25x75 e registra uma pontuação para a cartela atualmente endo pesquisada
+4 - Se uma cartela chega a 3, 2 ou 1 ponto faltando para ganhar, o sistema já lista esta cartela numa espécie de lista de cartelas armadas motrando a situação atual da cartela.
+5 - Se uma cartela alcança o numero maximo de pontuação, então o sisstema mostra a lista de cartelas ganhadoras
+
+O sistema vai ser multi-usuário, porque vai ser um serviço web de sorteios de bingo. Eu não sei realmente se utilizaremos um banco de dados ou não, isso porque não é um sistema que precisa guardar por muito tempo as informações sobre os sorteios, e pensando assim acho que seria mais simples, muito mais simples mesmo utilizar arquivo json para gerir esses salvamentos e de tempos em tempos remover os mais antigos, o problema do banco de dados é a manutenção que acho ser mais complexa.
+
+Sobre as partes principais do sistema:
+
+1 - O servidor web socket que vai possibilitar o acompanhamento em tempo real dos sorteios, e claro fazer todo o processamento backend de forma muito segura, para evitar fraudes.
+2 - O front-end vai ter várias partes de controle e saidas diferentes:
+  2.1 - Uma tela geral para dá acesso às outras telas do sistema.
+  2.2 - A tela do operador, o operador é o usuário que digita os números que o locutor chamar.
+  2.3 - Uma tela que é a principal, um painel que mostra em uma página bem responsivel, os numeros que foram chamados e as listas de cartelas armadas ou ganhadoras, essa tela é muito importante, ela tem que ser capaz de ser enviada como link para por exemplo um grupo do zap,  ao clicar no link os clientes poderão acessar a tela e acompanhar o sorteio em tempo real.
+  
+Vamos relembrar que é importante que o sistema seja multi-usuários, podemos fazer da seguinte forma:
+    1 - Eu como administrador do sistema, recebo um pedido de sorteio por parte de um Assinante meu, então eu vou na tela administrativa dos sorteios e gero um link para esse assinante, pode er um link que seja controlado por um codigo hash, que quando ele colocar ee código lá na tela de assinantes ele vai direto para um gerador de sorteio, ese assinante pode lá, configurar as definições do sorteios dele, ele vai poder gerenciar os sorteios dele lá.
+	2 - Eu como Adminirador poderei ver os sorteios que estão em andamento, os que ja foram realizados, os que estão agendados.
+	
+Então, é obvio que teremos que ter uma forma de controlar o acesso para os gerenciamentos dos sorrteios, o fato é que os Assinantes terão seus código de sorteios e a qualquer momento eles podem entrar lá efetuar suas tarefas, mas um Assinante não pode ter acesso ao sorteio de outro assinante, ou melhor dizendo cada sorteio terá seu codigo unico e só é acessado por ese código, e eu como administrador fico responsável de criar os sorteios por enquanto, não vamos aautomatizar para os sorteios serem criados por usuários automaticamente para ficar mais simples de implemenetar.
+
+
+Sobre o ambiente do sistema:
+ 1 - O sistema vai ficar numa VPS, vou lhe fornecer os acessos
+ 2 - Eu quero fazer o servidor web socket com Qt Creator que rode bem na versão ubuntu 20.04 porque já tenho experiencia com o qt creator.
+ 3 - Vamos abrir o projeto num computador que está rodando windows ou linux, eu imagino que poderemos desenvolver o projeto na sua IDE Antigravity, enviar o projeto para o github e de lá poderemos  clonar  o projeto na VPS via ssh.
+ Eu até tenho  a IDE do qt creator instaladas  aqui numa maquina windows e numa maquina liux, mas acho que não vai ser necessário já que vamos tratar somente com a programação em linha no qt creator, não vamos mexer com interface gráfica no qt creator.
+ 
+ Me diga se a amplitudo desse projeto é complicada para você gerar e como podemos proceder.

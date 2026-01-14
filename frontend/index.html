@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Sorteio Ao Vivo</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            text-align: center;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .status-badge.connected {
+            color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--bg-glass);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="connection-screen" class="hero">
+        <div class="glass-panel" style="padding: 3rem; max-width: 400px;">
+            <div id="status-indicator" class="status-badge">Desconectado...</div>
+            <h1 style="margin-bottom: 1rem; font-size: 2.5rem;">BingoSys</h1>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Sistema de Sorteio Ao Vivo</p>
+            
+            <button id="btn-enter" class="btn btn-primary" onclick="enterPanel()" disabled>
+                Aguardando Conexão...
+            </button>
+        </div>
+    </div>
+
+    <div id="main-panel" style="display: none;">
+        <header class="header">
+            <h3>BingoSys <span style="font-weight: 300; opacity: 0.7;">Ao Vivo</span></h3>
+            <div id="server-status" style="color: var(--success); font-size: 0.8rem;">● Online</div>
+        </header>
+        
+        <main class="container" style="padding-top: 2rem;">
+            <!-- Placeholder content -->
+            <div class="glass-panel" style="padding: 2rem; text-align: center;">
+                <h2>Aguardando início do sorteio...</h2>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script>
+        const statusInd = document.getElementById('status-indicator');
+        const updateStatus = (connected) => {
+            const btn = document.getElementById('btn-enter');
+            if(connected) {
+                statusInd.textContent = "Conectado ao Servidor";
+                statusInd.classList.add('connected');
+                btn.textContent = "Entrar no Painel";
+                btn.removeAttribute('disabled');
+            } else {
+                statusInd.textContent = "Tentando conectar...";
+                statusInd.classList.remove('connected');
+                btn.textContent = "Conectando...";
+                btn.setAttribute('disabled', true);
+            }
+        };
+
+        bingoSocket.on('connected', () => updateStatus(true));
+        bingoSocket.on('disconnected', () => updateStatus(false));
+
+        function enterPanel() {
+            document.getElementById('connection-screen').style.display = 'none';
+            document.getElementById('main-panel').style.display = 'block';
+            bingoSocket.send('get_state'); // Exemplo
+        }
+    </script>
+</body>
+</html>

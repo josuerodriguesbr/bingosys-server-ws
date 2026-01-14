@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Painel Ao Vivo</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body {
+            overflow: hidden;
+            /* Avoid scroll on TV screens if possible */
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr 300px;
+            /* Sidebar | Main | Sidebar */
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 250px 1fr;
+            }
+
+            .right-sidebar {
+                display: none;
+                /* Hide something or rearrange */
+            }
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Last Calls Bar */
+        .balls-history {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+        }
+
+        .ball {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .ball.last {
+            background: var(--warning);
+            color: #000;
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Current Call - The Big One */
+        .current-ball-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .big-ball {
+            width: 25vw;
+            height: 25vw;
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--accent-primary), #1e3a8a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 0 50px var(--accent-glow), inset 0 0 20px rgba(255, 255, 255, 0.3);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 1rem;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Lists */
+        .ticket-list {
+            list-style: none;
+            overflow-y: auto;
+            max-height: calc(100vh - 100px);
+        }
+
+        .ticket-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--radius-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--text-secondary);
+        }
+
+        .ticket-item.winner {
+            background: rgba(34, 197, 94, 0.2);
+            border-left-color: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .ticket-item.near-1 {
+            border-left-color: var(--warning);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-grid">
+        <!-- Left: Near Wins (Good) -->
+        <aside class="glass-panel" style="padding: 1rem;">
+            <div class="section-title">Boa (Falta 1)</div>
+            <ul id="list-near-1" class="ticket-list">
+                <!-- Items injected via JS -->
+            </ul>
+        </aside>
+
+        <!-- Center: Highlights -->
+        <main class="glass-panel" style="position: relative; overflow: hidden;">
+            <div class="current-ball-display">
+                <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 1rem;">ÚLTIMA BOLA</div>
+                <div id="current-ball" class="big-ball">--</div>
+                <div style="font-size: 2rem; font-weight: 300; margin-top: 1rem;">Sorteio #1234</div>
+            </div>
+
+            <!-- Bottom: History -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.3); padding: 1rem;">
+                <div style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary);">HISTÓRICO</div>
+                <div id="history-row" class="balls-history">
+                    <!-- Balls injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Right: Winners -->
+        <aside class="glass-panel" style="padding: 1rem;">
+            <div class="section-title" style="color: var(--success); border-color: var(--success);">Ganhadores!</div>
+            <ul id="list-winners" class="ticket-list">
+                <!-- Winners... -->
+            </ul>
+        </aside>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script>
+        // DOM Elements
+        const elCurrentBall = document.getElementById('current-ball');
+        const elHistory = document.getElementById('history-row');
+        const elListNear1 = document.getElementById('list-near-1');
+        const elListWinners = document.getElementById('list-winners');
+
+        // State
+        let drawnNumbers = [];
+
+        // Socket Events
+        bingoSocket.on('connected', () => {
+            console.log('Painel conectado!');
+            // Request full state if needed, or wait for next update
+        });
+
+        bingoSocket.on('number_drawn', (data) => {
+            const num = data.number;
+            updateDisplay(num);
+        });
+
+        bingoSocket.on('game_update', (data) => {
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
+        });
+
+        bingoSocket.on('game_started', () => {
+            resetBoard();
+        });
+
+        function updateDisplay(number) {
+            // Update Big Ball
+            // Trigger animation reset
+            elCurrentBall.style.animation = 'none';
+            elCurrentBall.offsetHeight; /* trigger reflow */
+            elCurrentBall.style.animation = null;
+            elCurrentBall.textContent = number < 10 ? '0' + number : number;
+
+            // Add to history
+            const ball = document.createElement('div');
+            ball.className = 'ball animate-fade-in';
+            ball.textContent = number;
+            // Prepend
+            elHistory.insertBefore(ball, elHistory.firstChild);
+        }
+
+        function updateWinners(winners) {
+            elListWinners.innerHTML = '';
+            winners.forEach(id => {
+                const li = document.createElement('li');
+                li.className = 'ticket-item winner animate-fade-in';
+                li.innerHTML = `<span>Cartela #${id}</span> <span>🏆</span>`;
+                elListWinners.appendChild(li);
+            });
+        }
+
+        function updateNearWins(nearWins) {
+            // Focus on "1" missing
+            if (nearWins["1"]) {
+                const ids = nearWins["1"];
+                elListNear1.innerHTML = '';
+                ids.forEach(id => {
+                    const li = document.createElement('li');
+                    li.className = 'ticket-item near-1 animate-fade-in';
+                    li.innerHTML = `<span>Cartela #${id}</span> <span>Falta 1</span>`;
+                    elListNear1.appendChild(li);
+                });
+            }
+        }
+
+        function resetBoard() {
+            elCurrentBall.textContent = "--";
+            elHistory.innerHTML = "";
+            elListNear1.innerHTML = "";
+            elListWinners.innerHTML = "";
+        }
+    </script>
+</body>
+
+</html>
