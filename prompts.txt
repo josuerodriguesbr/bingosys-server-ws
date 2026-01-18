@@ -250,3 +250,24 @@ Vamos aproveitar e colocar lá nas preferências quantas ultimas bolas ele quer
 que apareça para os cliente.
 
 ========================================================================================
+
+
+=========================================================================================
+SOBRE TELAS
+=========================================================================================
+1- Eu alterei a quantidade de ultimos numeros em preferencias de 10 para 5, salvei  dei 
+reset no sorteio, mesmo assim a quantidade de ultimas bolas chamadas para o clientee 
+ficou com o valor anterior 10.
+2- Percebi que depois que saaiu um ganhador, e eu continuei chamando os números, chega 
+um momneto que as cartelas armadas, a lista simplesmente some, ao continuar chamando 
+bolas com cartelas ja na lista de gganhadores, chegou um momento que a lista de ganhadores
+ também sumiu. Parece que quando chega a um serto numero de cartelas nessas lista 
+  então somi tudo da lissta. 
+3- Não está mais aparecendo a informação de quantas mais cartelas , armadas ou ganhadoras
+ existem, antes nós tinhamos esta informação para sabermos a quantidade total de cartelas 
+ armadas ou ganhadoras. Antes  tinhamos essa informação. e também antes, o limite de 
+ cartelas que ficou  acertador para aparecer era até 3 cartelas apareceriam, e o restante 
+  saberiamos  pela informação tipo assim  "+ 13 armadas"  e "+  2 ganhadores" Estes 
+  detalhes ão importantes por causa da economia de espaço na tela que  nos finalmente
+   poderemos ajustar melhor.
+========================================================================================

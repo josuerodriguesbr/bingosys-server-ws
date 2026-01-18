@@ -586,13 +586,18 @@
 
         // State
         let drawnNumbers = [];
+        let lastWinners = [];
+        let lastNearWins = {};
         let config = {
             maxBalls: 75,
             gridIndex: 0,
             numChances: 1,
-            modeName: " Bingo 75 x 15 (Clássico)"
+            modeName: " Bingo 75 x 15 (Clássico)",
+            historyLimit: 10
         };
         let availableModes = [];
+        let showAllWinners = false;
+        let showAllNear1 = false;
 
         // Socket Events
         bingoSocket.on('connected', () => {
@@ -609,7 +614,7 @@
             elHistory.innerHTML = "";
             drawnNumbers.forEach(num => {
                 const ball = document.createElement('div');
-                ball.className = 'history-ball';
+                ball.className = 'ball animate-fade-in'; // Usando classe consistente
                 ball.textContent = num < 10 ? '0' + num : num;
                 elHistory.insertBefore(ball, elHistory.firstChild);
             });
@@ -654,6 +659,10 @@
             const num = data.number;
             drawnNumbers.push(num);
             updateDisplay(num);
+
+            // Re-renderiza listas para atualizar destaques nos grids
+            updateWinners(lastWinners);
+            updateNearWins(lastNearWins);
         });
 
         bingoSocket.on('number_cancelled', (data) => {
@@ -675,6 +684,10 @@
             // Atualiza listas
             if (data.winners) updateWinners(data.winners);
             if (data.near_wins) updateNearWins(data.near_wins);
+
+            // Re-renderiza para atualizar destaques
+            updateWinners(lastWinners);
+            updateNearWins(lastNearWins);
         });
 
         bingoSocket.on('ticket_registered', (data) => {
@@ -757,58 +770,62 @@
         }
 
         function updateWinners(winners) {
+            lastWinners = winners || [];
             elListWinners.innerHTML = "";
-            if (winners.length > 5 && !showAllWinners) {
+            let toShow = [...lastWinners];
+
+            if (toShow.length > 3 && !showAllWinners) {
                 elMoreWinners.style.display = 'block';
-                elMoreWinners.textContent = `+ ${winners.length - 5} ganhadores`;
-                winners = winners.slice(0, 5);
+                elMoreWinners.textContent = `+ ${toShow.length - 3} ganhadores`;
+                toShow = toShow.slice(0, 3);
             } else {
                 elMoreWinners.style.display = 'none';
             }
 
-            winners.forEach(ticket => {
-                const div = document.createElement('div');
-                div.className = 'ticket-card winner';
-
-                let gridHtml = renderBingoGrid(ticket.numbers);
-
-                div.innerHTML = `
-                    <div class="ticket-header">
-                        <span style="color: var(--success)">🏆 #${ticket.barcode}</span>
-                        <span>GANHOU!</span>
-                    </div>
-                    ${gridHtml}
-                `;
-                elListWinners.appendChild(div);
+            toShow.forEach(ticket => {
+                try {
+                    const div = document.createElement('div');
+                    div.className = 'ticket-card winner';
+                    let gridHtml = renderBingoGrid(ticket.numbers);
+                    div.innerHTML = `
+                        <div class="ticket-header">
+                            <span style="color: var(--success)">🏆 #${ticket.barcode}</span>
+                            <span>GANHOU!</span>
+                        </div>
+                        ${gridHtml}
+                    `;
+                    elListWinners.appendChild(div);
+                } catch (e) { console.error("Erro ao renderizar vencedor:", e); }
             });
         }
 
         function updateNearWins(nearWins) {
+            lastNearWins = nearWins || {};
             elListNear1.innerHTML = "";
-            let list1 = nearWins["1"] || [];
+            let list1 = lastNearWins["1"] || [];
 
-            if (list1.length > 5 && !showAllNear1) {
+            if (list1.length > 3 && !showAllNear1) {
                 elMoreNear1.style.display = 'block';
-                elMoreNear1.textContent = `+ ${list1.length - 5} armadas`;
-                list1 = list1.slice(0, 5);
+                elMoreNear1.textContent = `+ ${list1.length - 3} armadas`;
+                list1 = list1.slice(0, 3);
             } else {
                 elMoreNear1.style.display = 'none';
             }
 
             list1.forEach(ticket => {
-                const div = document.createElement('div');
-                div.className = 'ticket-card near-1';
-
-                let gridHtml = renderBingoGrid(ticket.numbers);
-
-                div.innerHTML = `
-                    <div class="ticket-header">
-                        <span style="color: var(--warning)">🔥 #${ticket.barcode}</span>
-                        <span>FALTA 1</span>
-                    </div>
-                    ${gridHtml}
-                `;
-                elListNear1.appendChild(div);
+                try {
+                    const div = document.createElement('div');
+                    div.className = 'ticket-card near-1';
+                    let gridHtml = renderBingoGrid(ticket.numbers);
+                    div.innerHTML = `
+                        <div class="ticket-header">
+                            <span style="color: var(--warning)">🔥 #${ticket.barcode}</span>
+                            <span>FALTA 1</span>
+                        </div>
+                        ${gridHtml}
+                    `;
+                    elListNear1.appendChild(div);
+                } catch (e) { console.error("Erro ao renderizar armada:", e); }
             });
         }
 
