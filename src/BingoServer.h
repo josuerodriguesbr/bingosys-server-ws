@@ -7,6 +7,7 @@
 #include <QList>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include "BingoGameEngine.h"
 
 class BingoServer : public QObject
