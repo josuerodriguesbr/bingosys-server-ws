@@ -67,6 +67,9 @@ void BingoServer::loadSales()
     }
     file.close();
     qInfo() << "Vendas carregadas:" << m_gameEngine.getRegisteredCount();
+    
+    // Auto-inicializa o jogo para garantir que o motor esteja "ligado"
+    m_gameEngine.startNewGame();
 }
 
 void BingoServer::saveSales()
@@ -168,6 +171,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     }
     else if (action == "draw_number") {
         int number = json["number"].toInt();
+        qInfo() << "Processando bola sorteada:" << number;
         bool hasUpdates = m_gameEngine.processNumber(number);
         
         // Broadcast do numero sorteado
@@ -177,6 +181,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         broadcastJson(numMsg);
         
         if (hasUpdates) {
+            qInfo() << "Novas atualizacoes detectadas para a bola" << number;
             // Envia atualizacao de ganhadores/armados
             QJsonObject updateMsg;
             updateMsg["action"] = "game_update";
@@ -227,10 +232,13 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         int ticketId = barcode / 10;
         int checkDigit = barcode % 10;
         
+        qInfo() << "Tentativa de registro: Barcode" << barcode << "-> ID" << ticketId << "DV esperado" << checkDigit;
+        
         QJsonObject resp;
         
         // Verifica se o dígito verificador é válido
         if (m_gameEngine.isValidCheckDigit(ticketId, checkDigit)) {
+            qInfo() << "Registro bem sucedido para cartela" << ticketId;
             m_gameEngine.registerTicket(ticketId);
             
             // Registra o timestamp da venda
