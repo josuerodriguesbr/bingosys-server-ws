@@ -99,6 +99,22 @@
             cursor: pointer;
             font-weight: 600;
         }
+
+        .error-blink {
+            animation: errorBlink 0.3s infinite alternate;
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6) !important;
+        }
+
+        @keyframes errorBlink {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0.5;
+            }
+        }
     </style>
 </head>
 
@@ -174,15 +190,22 @@
         });
 
         bingoSocket.on('ticket_registered', (data) => {
+            if (data.status === 'error') {
+                alert('ERRO: ' + data.message);
+                input.classList.add('error-blink');
+                setTimeout(() => input.classList.remove('error-blink'), 500);
+                return;
+            }
+
             elTotal.textContent = data.totalRegistered;
             elLast.textContent = '#' + data.ticketId;
 
+            const time = data.timestamp ? data.timestamp.split(' ')[1] : '--:--';
+
             const li = document.createElement('li');
             li.className = 'recent-item';
-            li.innerHTML = `<span>Cartela #${data.ticketId}</span> <span style="color: var(--success);">OK</span>`;
+            li.innerHTML = `<span>Cartela #${data.ticketId}</span> <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 10px;">${time}</span> <span style="color: var(--success); margin-left: auto;">OK</span>`;
             elLog.insertBefore(li, elLog.firstChild);
-
-            // Som de sucesso se houver? (Opcional)
         });
 
         bingoSocket.on('sales_cleared', (data) => {

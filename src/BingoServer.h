@@ -39,6 +39,7 @@ private:
     
     BingoGameEngine m_gameEngine;
     QString m_salesPath;
+    QMap<int, QString> m_saleTimestamps; // Mapeia ID da cartela para o timestamp da venda
 };
 
 #endif // BINGOSERVER_H

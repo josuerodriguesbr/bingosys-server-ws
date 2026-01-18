@@ -38,6 +38,7 @@ public:
     void clearRegisteredTickets();
     int getRegisteredCount() const { return m_registeredTickets.size(); }
     bool isTicketRegistered(int ticketId) const { return m_registeredTickets.contains(ticketId); }
+    bool isValidCheckDigit(int ticketId, int checkDigit) const;
     QSet<int> getRegisteredTickets() const { return m_registeredTickets; }
     const QVector<BingoTicket>& getAllTickets() const { return m_allTickets; }
     QString getFormattedBarcode(int ticketId) const;

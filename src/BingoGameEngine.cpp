@@ -28,31 +28,42 @@ void BingoGameEngine::startNewGame()
     m_winners.clear();
     m_nearWins.clear();
 
-    // Inicializa o estado das cartelas para o modo de jogo atual
-    for (const auto &ticket : m_allTickets) {
-        // Filtro: Se houver cartelas registradas, ignore as não registradas
-        if (!m_registeredTickets.isEmpty() && !m_registeredTickets.contains(ticket.id)) {
-            continue;
-        }
+    // OTIMIZAÇÃO: Se temos cartelas registradas, iteramos APENAS sobre elas.
+    // Isso é muito mais rápido do que iterar sobre os 10 milhões de cartelas totais.
+    if (!m_registeredTickets.isEmpty()) {
+        for (int ticketId : m_registeredTickets) {
+            // No sistema, IDs são 1-based, m_allTickets é 0-indexed
+            int idx = ticketId - 1;
+            if (idx < 0 || idx >= m_allTickets.size()) continue;
 
-        if (m_currentGridIndex >= ticket.grids.size()) {
-            qWarning() << "Cartela" << ticket.id << "nao possui grade no indice" << m_currentGridIndex;
-            continue;
-        }
+            const auto &ticket = m_allTickets[idx];
+            if (m_currentGridIndex >= ticket.grids.size()) continue;
 
-        TicketState state;
-        state.ticketId = ticket.id;
-        state.matches = 0;
-        
-        // Copia os numeros da grade alvo para o set de "missing"
-        // Assim podemos remover conforme saem os numeros
-        const QVector<int> &grid = ticket.grids[m_currentGridIndex];
-        state.totalNumbers = grid.size();
-        for(int n : grid) {
-            state.missingNumbers.insert(n);
+            TicketState state;
+            state.ticketId = ticket.id;
+            state.matches = 0;
+            const QVector<int> &grid = ticket.grids[m_currentGridIndex];
+            state.totalNumbers = grid.size();
+            for(int n : grid) {
+                state.missingNumbers.insert(n);
+            }
+            m_activeTickets.insert(ticket.id, state);
         }
+    } else {
+        // Se NÃO há registro de vendas (modo treino ou livre), usamos todas as cartelas carregadas.
+        for (const auto &ticket : m_allTickets) {
+            if (m_currentGridIndex >= ticket.grids.size()) continue;
 
-        m_activeTickets.insert(ticket.id, state);
+            TicketState state;
+            state.ticketId = ticket.id;
+            state.matches = 0;
+            const QVector<int> &grid = ticket.grids[m_currentGridIndex];
+            state.totalNumbers = grid.size();
+            for(int n : grid) {
+                state.missingNumbers.insert(n);
+            }
+            m_activeTickets.insert(ticket.id, state);
+        }
     }
 
     qInfo() << "Novo sorteio iniciado com" << m_activeTickets.size() << "cartelas ativas.";
@@ -199,4 +210,9 @@ QString BingoGameEngine::getFormattedBarcode(int ticketId) const
     int digit = m_idToDigit.value(ticketId, 0);
     // Formato: 6 digitos para ID + 1 digito para CD = 7 total
     return QString("%1%2").arg(ticketId, 6, 10, QChar('0')).arg(digit);
+}
+
+bool BingoGameEngine::isValidCheckDigit(int ticketId, int checkDigit) const
+{
+    return m_idToDigit.contains(ticketId) && m_idToDigit.value(ticketId) == checkDigit;
 }

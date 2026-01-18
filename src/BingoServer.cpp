@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDateTime>
 
 BingoServer::BingoServer(quint16 port, QObject *parent) :
     QObject(parent),
@@ -50,8 +51,19 @@ void BingoServer::loadSales()
 
     QTextStream in(&file);
     while (!in.atEnd()) {
-        int id = in.readLine().trimmed().toInt();
-        if (id > 0) m_gameEngine.registerTicket(id);
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
+
+        QStringList parts = line.split(',');
+        int id = parts[0].toInt();
+        if (id > 0) {
+            m_gameEngine.registerTicket(id);
+            if (parts.size() > 1) {
+                m_saleTimestamps[id] = parts[1];
+            } else {
+                m_saleTimestamps[id] = "N/A";
+            }
+        }
     }
     file.close();
     qInfo() << "Vendas carregadas:" << m_gameEngine.getRegisteredCount();
@@ -65,7 +77,8 @@ void BingoServer::saveSales()
 
     QTextStream out(&file);
     for (int id : m_gameEngine.getRegisteredTickets()) {
-        out << id << "\n";
+        QString ts = m_saleTimestamps.value(id, "N/A");
+        out << id << "," << ts << "\n";
     }
     file.close();
 }
@@ -210,37 +223,56 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         }
     }
     else if (action == "register_ticket") {
-        int id = json["barcode"].toInt(); 
-        // No protocolo do bingo o codigo de barras pode ser o ID
-        // Vamos extrair o ID conforme a regra: barcode / 10 (remove o digito)
-        int ticketId = id / 10;
-        
-        m_gameEngine.registerTicket(ticketId);
+        int barcode = json["barcode"].toInt(); 
+        int ticketId = barcode / 10;
+        int checkDigit = barcode % 10;
         
         QJsonObject resp;
-        resp["action"] = "ticket_registered";
-        resp["ticketId"] = m_gameEngine.getFormattedBarcode(ticketId);
-        resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
-        broadcastJson(resp);
         
-        saveSales();
+        // Verifica se o dígito verificador é válido
+        if (m_gameEngine.isValidCheckDigit(ticketId, checkDigit)) {
+            m_gameEngine.registerTicket(ticketId);
+            
+            // Registra o timestamp da venda
+            QString timestamp = QDateTime::currentDateTime().toString("yyyy-mm-dd hh:mm:ss");
+            m_saleTimestamps[ticketId] = timestamp;
+            
+            resp["action"] = "ticket_registered";
+            resp["status"] = "ok";
+            resp["ticketId"] = m_gameEngine.getFormattedBarcode(ticketId);
+            resp["timestamp"] = timestamp;
+            resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
+            broadcastJson(resp);
+            
+            saveSales();
+        } else {
+            qWarning() << "Tentativa de registro com DV invalido:" << barcode;
+            resp["action"] = "ticket_registered";
+            resp["status"] = "error";
+            resp["message"] = "Digito Verificador Invalido";
+            sendJson(client, resp);
+        }
     }
     else if (action == "register_random") {
         int count = json["count"].toInt();
         if (count <= 0) count = 10;
         
-        // Pega IDs aleatórios da lista de cartelas carregadas
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-mm-dd hh:mm:ss");
+        
         const QVector<BingoTicket> &all = m_gameEngine.getAllTickets();
         if (!all.isEmpty()) {
             for (int i = 0; i < count; ++i) {
                 int randomIndex = qrand() % all.size();
-                m_gameEngine.registerTicket(all[randomIndex].id);
+                int id = all[randomIndex].id;
+                m_gameEngine.registerTicket(id);
+                m_saleTimestamps[id] = timestamp + " (Lote)";
             }
         }
         
         QJsonObject resp;
-        resp["action"] = "ticket_registered"; // Reusa a ação para atualizar o contador
-        resp["ticketId"] = 0; // 0 indica lote
+        resp["action"] = "ticket_registered";
+        resp["status"] = "ok";
+        resp["ticketId"] = 0; 
         resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
         broadcastJson(resp);
         
@@ -248,6 +280,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     }
     else if (action == "clear_sales") {
         m_gameEngine.clearRegisteredTickets();
+        m_saleTimestamps.clear();
         
         QJsonObject resp;
         resp["action"] = "sales_cleared";
