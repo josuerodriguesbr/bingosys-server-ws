@@ -659,8 +659,14 @@
                 elCurrentBall.textContent = "--";
             }
 
-            if (data.winners) updateWinners(data.winners);
-            if (data.near_wins) updateNearWins(data.near_wins);
+            if (data.winners) {
+                lastWinners = data.winners;
+                updateWinners(lastWinners);
+            }
+            if (data.near_wins) {
+                lastNearWins = data.near_wins;
+                updateNearWins(lastNearWins);
+            }
 
             if (document.getElementById('mode-display')) {
                 document.getElementById('mode-display').textContent = data.modeName || "Bingo";
