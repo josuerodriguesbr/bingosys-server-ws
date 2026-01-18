@@ -244,10 +244,160 @@
             font-weight: 500;
             letter-spacing: 2px;
         }
+
+        /* Top Menu Bar */
+        .top-navbar {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-primary);
+        }
+
+        .nav-btn.primary {
+            background: var(--accent-primary);
+            border-color: transparent;
+        }
+
+        /* Modal Settings */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-card {
+            background: var(--bg-secondary);
+            width: 100%;
+            max-width: 450px;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 1rem;
+        }
+
+        .form-select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            color: white;
+            font-size: 1rem;
+            appearance: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .mode-badge {
+            font-size: 0.75rem;
+            background: rgba(var(--accent-primary-rgb), 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            color: var(--accent-glow);
+            border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+        }
     </style>
 </head>
 
 <body>
+
+    <nav class="top-navbar">
+        <div class="nav-logo">BINGOSYS</div>
+        <div id="game-status-badge" class="nav-actions">
+            <div id="mode-display" class="mode-badge">75 Bolas | 1 Chance</div>
+            <a href="vendas.html" class="nav-btn">🛒 VENDAS</a>
+            <button onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
+        </div>
+    </nav>
 
     <div class="main-grid">
         <!-- Left: Near Wins (Good) -->
@@ -282,20 +432,17 @@
 
             <!-- Admin Controls Overlay -->
             <div class="admin-controls">
-                <a href="vendas.html"
-                    style="background: #4b5563; color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; text-decoration: none; font-size: 0.8rem; margin-right: 1rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1.5rem;">REGISTRAR
-                    VENDAS</a>
                 <div
                     style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1rem; margin-right: 0.5rem;">
-                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="75">
-                    <button onclick="drawManual()"
+                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="90">
+                    <button id="btn-confirm" onclick="drawManual()"
                         style="background: var(--accent-primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600;">CONFIRMAR</button>
                 </div>
-                <button onclick="drawRandomNumber()"
+                <button id="btn-random" onclick="drawRandomNumber()"
                     style="background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; margin-right: 0.5rem;">ALEATÓRIO</button>
-                <button onclick="undoLast()"
+                <button id="btn-undo" onclick="undoLast()"
                     style="background: var(--warning); color: #000; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-right: 0.5rem;">DESFAZER</button>
-                <button onclick="requestNewGame()"
+                <button id="btn-reset" onclick="requestNewGame()"
                     style="background: var(--danger); color: white; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem;">RESET</button>
             </div>
         </main>
@@ -308,6 +455,47 @@
             </ul>
             <div id="more-winners" class="more-badge" style="display: none;"></div>
         </aside>
+    </div>
+
+    <!-- Modal Preferences -->
+    <div id="modal-settings" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">Preferências do Sorteio</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Quantidade de Bolas no Globo</label>
+                <select id="cfg-balls" class="form-select">
+                    <option value="60">60 Bolas</option>
+                    <option value="75" selected>75 Bolas</option>
+                    <option value="90">90 Bolas</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tipo de Cartela (Grade/Parte)</label>
+                <select id="cfg-grid" class="form-select">
+                    <option value="0">1ª Parte (Padrão)</option>
+                    <option value="1">2ª Parte</option>
+                    <option value="2">3ª Parte</option>
+                    <option value="3">4ª Parte</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Quantidade de Chances</label>
+                <input type="number" id="cfg-chances" class="form-input" value="1" min="1" max="10">
+                <small style="color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.25rem; display: block;">
+                    Um bip registrará esta quantidade de cartelas em sequência.
+                </small>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closeSettings()" class="nav-btn">Cancelar</button>
+                <button onclick="saveSettings()" class="nav-btn primary">Salvar Alterações</button>
+            </div>
+        </div>
     </div>
 
     <script src="js/socket.js"></script>
@@ -323,7 +511,11 @@
 
         // State
         let drawnNumbers = [];
-        const MAX_NUMBER = 75;
+        let config = {
+            maxBalls: 75,
+            gridIndex: 0,
+            numChances: 1
+        };
 
         // Socket Events
         bingoSocket.on('connected', () => {
@@ -355,6 +547,24 @@
             // Sincroniza listas
             if (data.winners) updateWinners(data.winners);
             if (data.near_wins) updateNearWins(data.near_wins);
+
+            // Sincroniza Configurações
+            if (data.maxBalls) config.maxBalls = data.maxBalls;
+            if (data.gridIndex) config.gridIndex = data.gridIndex;
+            if (data.numChances) config.numChances = data.numChances;
+            updateConfigBadge();
+        });
+
+        bingoSocket.on('config_updated', (data) => {
+            config.maxBalls = data.maxBalls;
+            config.gridIndex = data.gridIndex;
+            config.numChances = data.numChances;
+            updateConfigBadge();
+
+            // Sincroniza campos se o administrador estiver com o modal aberto
+            document.getElementById('cfg-balls').value = data.maxBalls;
+            document.getElementById('cfg-grid').value = data.gridIndex;
+            document.getElementById('cfg-chances').value = data.numChances;
         });
 
         bingoSocket.on('number_drawn', (data) => {
@@ -418,14 +628,14 @@
         }
 
         function drawRandomNumber() {
-            if (drawnNumbers.length >= MAX_NUMBER) {
+            if (drawnNumbers.length >= config.maxBalls) {
                 alert("Todos os números já foram sorteados!");
                 return;
             }
 
             let num;
             do {
-                num = Math.floor(Math.random() * MAX_NUMBER) + 1;
+                num = Math.floor(Math.random() * config.maxBalls) + 1;
             } while (drawnNumbers.includes(num));
 
             bingoSocket.send("draw_number", { number: num });
@@ -433,8 +643,8 @@
 
         function drawManual() {
             const val = parseInt(elManualInput.value);
-            if (isNaN(val) || val < 1 || val > MAX_NUMBER) {
-                alert("Por favor, digite um número entre 1 e " + MAX_NUMBER);
+            if (isNaN(val) || val < 1 || val > config.maxBalls) {
+                alert("Por favor, digite um número entre 1 e " + config.maxBalls);
                 return;
             }
 
@@ -515,6 +725,42 @@
             elMoreNear1.style.display = 'none';
             elMoreWinners.style.display = 'none';
             drawnNumbers = [];
+        }
+
+        // Settings Modal Logic
+        function openSettings() {
+            document.getElementById('modal-settings').style.display = 'flex';
+            // Preenche campos com config atual
+            document.getElementById('cfg-balls').value = config.maxBalls;
+            document.getElementById('cfg-grid').value = config.gridIndex;
+            document.getElementById('cfg-chances').value = config.numChances;
+        }
+
+        function closeSettings() {
+            document.getElementById('modal-settings').style.display = 'none';
+        }
+
+        function saveSettings() {
+            const maxBalls = parseInt(document.getElementById('cfg-balls').value);
+            const gridIndex = parseInt(document.getElementById('cfg-grid').value);
+            const numChances = parseInt(document.getElementById('cfg-chances').value);
+
+            bingoSocket.send("update_config", {
+                maxBalls,
+                gridIndex,
+                numChances
+            });
+
+            closeSettings();
+        }
+
+        function updateConfigBadge() {
+            const badge = document.getElementById('mode-display');
+            if (badge) {
+                badge.textContent = `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1} | ${config.numChances} Chance(s)`;
+            }
+            // Atualiza o placeholder do manual input
+            elManualInput.max = config.maxBalls;
         }
     </script>
 </body>

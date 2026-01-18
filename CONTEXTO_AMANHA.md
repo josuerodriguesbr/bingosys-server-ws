@@ -22,4 +22,7 @@ O sistema está 100% funcional na nova estrutura de sub-pasta.
 - [ ] Adicionar suporte a múltiplos sorteios simultâneos ou "Etapas".
 - [ ] Melhorar a interface responsiva para dispositivos móveis ainda mais.
 
-🚀 Tudo pronto para os testes reais!
+6.  **Configuração Dinâmica**: Agora é possível alterar a quantidade de bolas (60, 75, 90), a grade/parte da cartela e o sistema de chances via interface.
+7.  **Sistema de Chances**: Implementada lógica que registra automaticamente cartelas em lote (ex: bipar ID 10 e registrar 10, 11, 12).
+8.  **Persistência**: Todas as configurações são salvas em `config.json` na VPS.
+9.  **Nova UI**: Painel Admin com barra de menu superior e modal de preferências.

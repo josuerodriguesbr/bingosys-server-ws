@@ -115,13 +115,36 @@
                 opacity: 0.5;
             }
         }
+
+        .mode-badge {
+            font-size: 0.8rem;
+            background: rgba(59, 130, 245, 0.2);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            color: var(--accent-glow);
+            border: 1px solid rgba(59, 130, 245, 0.3);
+            font-weight: 600;
+        }
+
+        .chances-tag {
+            background: var(--success);
+            color: black;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 800;
+            margin-left: 0.5rem;
+        }
     </style>
 </head>
 
 <body>
     <div class="vendas-container">
         <div class="header">
-            <h1 class="section-title" style="margin:0; border:0;">Registro de Vendas</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1 class="section-title" style="margin:0; border:0;">Vendas</h1>
+                <div id="mode-display" class="mode-badge">Sincronizando...</div>
+            </div>
             <a href="panel.html" style="color: var(--text-secondary); text-decoration: none;">← Voltar ao Painel</a>
         </div>
 
@@ -170,6 +193,7 @@
         const elTotal = document.getElementById('total-count');
         const elLast = document.getElementById('last-ticket');
         const elLog = document.getElementById('recent-log');
+        const elMode = document.getElementById('mode-display');
 
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -187,7 +211,18 @@
 
         bingoSocket.on('sync_status', (data) => {
             elTotal.textContent = data.totalRegistered;
+            if (data.maxBalls) {
+                updateModeDisplay(data.maxBalls, data.numChances);
+            }
         });
+
+        bingoSocket.on('config_updated', (data) => {
+            updateModeDisplay(data.maxBalls, data.numChances);
+        });
+
+        function updateModeDisplay(maxBalls, numChances) {
+            elMode.textContent = `${maxBalls} Bolas | ${numChances} Chance(s)`;
+        }
 
         bingoSocket.on('ticket_registered', (data) => {
             if (data.status === 'error') {
@@ -201,10 +236,20 @@
             elLast.textContent = '#' + data.ticketId;
 
             const time = data.timestamp ? data.timestamp.split(' ')[1] : '--:--';
+            const chancesTag = data.chances > 1 ? `<span class="chances-tag">${data.chances} CHANCES</span>` : '';
 
             const li = document.createElement('li');
             li.className = 'recent-item';
-            li.innerHTML = `<span>Cartela #${data.ticketId}</span> <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 10px;">${time}</span> <span style="color: var(--success); margin-left: auto;">OK</span>`;
+            li.innerHTML = `
+                <div>
+                    <span>Cartela #${data.ticketId}</span>
+                    ${chancesTag}
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">${time}</span>
+                    <span style="color: var(--success); font-weight: 700;">OK</span>
+                </div>
+            `;
             elLog.insertBefore(li, elLog.firstChild);
         });
 

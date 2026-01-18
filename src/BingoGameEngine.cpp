@@ -1,7 +1,8 @@
 #include "BingoGameEngine.h"
 #include <QDebug>
 
-BingoGameEngine::BingoGameEngine(QObject *parent) : QObject(parent), m_currentGridIndex(0)
+BingoGameEngine::BingoGameEngine(QObject *parent) 
+    : QObject(parent), m_currentGridIndex(0), m_maxBalls(75), m_numChances(1)
 {
 }
 
@@ -71,6 +72,11 @@ void BingoGameEngine::startNewGame()
 
 bool BingoGameEngine::processNumber(int number)
 {
+    if (number < 1 || number > m_maxBalls) {
+        qWarning() << "GameEngine: Numero invalido ignorado:" << number << "(Max:" << m_maxBalls << ")";
+        return false;
+    }
+
     if (m_drawnNumbers.contains(number)) {
         return false; // Numero repetido
     }

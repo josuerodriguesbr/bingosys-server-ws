@@ -41,6 +41,11 @@ void BingoServer::loadTickets(const QVector<BingoTicket> &tickets)
 void BingoServer::setSalesPath(const QString &path)
 {
     m_salesPath = path;
+    // Define o caminho do config na mesma pasta
+    QFileInfo info(path);
+    m_configPath = info.absolutePath() + "/config.json";
+    
+    loadConfig();
 }
 
 void BingoServer::loadSales()
@@ -86,6 +91,47 @@ void BingoServer::saveSales()
     file.close();
 }
 
+void BingoServer::loadConfig()
+{
+    if (m_configPath.isEmpty()) return;
+    QFile file(m_configPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qInfo() << "Config nao encontrado, usando padroes.";
+        return;
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) return;
+
+    QJsonObject obj = doc.object();
+    if (obj.contains("maxBalls")) m_gameEngine.setMaxBalls(obj["maxBalls"].toInt());
+    if (obj.contains("gridIndex")) m_gameEngine.setGameMode(obj["gridIndex"].toInt());
+    if (obj.contains("numChances")) m_gameEngine.setNumChances(obj["numChances"].toInt());
+
+    qInfo() << "Configurações carregadas: MaxBalls=" << m_gameEngine.getMaxBalls() 
+            << "Grade=" << m_gameEngine.getGameMode() 
+            << "Chances=" << m_gameEngine.getNumChances();
+}
+
+void BingoServer::saveConfig()
+{
+    if (m_configPath.isEmpty()) return;
+    QFile file(m_configPath);
+    if (!file.open(QIODevice::WriteOnly)) return;
+
+    QJsonObject obj;
+    obj["maxBalls"] = m_gameEngine.getMaxBalls();
+    obj["gridIndex"] = m_gameEngine.getGameMode();
+    obj["numChances"] = m_gameEngine.getNumChances();
+
+    file.write(QJsonDocument(obj).toJson());
+    file.close();
+    qInfo() << "Configurações salvas em:" << m_configPath;
+}
+
 void BingoServer::onNewConnection()
 {
     QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
@@ -118,6 +164,11 @@ void BingoServer::onNewConnection()
         nearWinObj[QString::number(it.key())] = idsInfo;
     }
     sync["near_wins"] = nearWinObj;
+    
+    // Configurações atuais
+    sync["maxBalls"] = m_gameEngine.getMaxBalls();
+    sync["gridIndex"] = m_gameEngine.getGameMode();
+    sync["numChances"] = m_gameEngine.getNumChances();
 
     sendJson(pSocket, sync);
 }
@@ -229,27 +280,34 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     }
     else if (action == "register_ticket") {
         int barcode = json["barcode"].toInt(); 
-        int ticketId = barcode / 10;
+        int baseId = barcode / 10;
         int checkDigit = barcode % 10;
+        int numChances = m_gameEngine.getNumChances();
         
-        qInfo() << "Tentativa de registro: Barcode" << barcode << "-> ID" << ticketId << "DV esperado" << checkDigit;
+        qInfo() << "Tentativa de registro: Barcode" << barcode << "-> BaseID" << baseId << "DV" << checkDigit << "Chances" << numChances;
         
         QJsonObject resp;
         
-        // Verifica se o dígito verificador é válido
-        if (m_gameEngine.isValidCheckDigit(ticketId, checkDigit)) {
-            qInfo() << "Registro bem sucedido para cartela" << ticketId;
-            m_gameEngine.registerTicket(ticketId);
-            
-            // Registra o timestamp da venda
+        // Verifica se o dígito verificador da PRIMEIRA cartela é válido
+        if (m_gameEngine.isValidCheckDigit(baseId, checkDigit)) {
             QString timestamp = QDateTime::currentDateTime().toString("yyyy-mm-dd hh:mm:ss");
-            m_saleTimestamps[ticketId] = timestamp;
+            
+            // Registra as N chances (ID, ID+1, ID+2...)
+            for (int i = 0; i < numChances; ++i) {
+                int currentId = baseId + i;
+                if (!m_gameEngine.isTicketRegistered(currentId)) {
+                    m_gameEngine.registerTicket(currentId);
+                    m_saleTimestamps[currentId] = (numChances > 1) ? QString("%1 (Chance %2)").arg(timestamp).arg(i+1) : timestamp;
+                    qInfo() << "Registrada cartela" << currentId << "(Chance" << (i+1) << ")";
+                }
+            }
             
             resp["action"] = "ticket_registered";
             resp["status"] = "ok";
-            resp["ticketId"] = m_gameEngine.getFormattedBarcode(ticketId);
+            resp["ticketId"] = m_gameEngine.getFormattedBarcode(baseId);
             resp["timestamp"] = timestamp;
             resp["totalRegistered"] = m_gameEngine.getRegisteredCount();
+            resp["chances"] = numChances;
             broadcastJson(resp);
             
             saveSales();
@@ -260,6 +318,23 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             resp["message"] = "Digito Verificador Invalido";
             sendJson(client, resp);
         }
+    }
+    else if (action == "update_config") {
+        if (json.contains("maxBalls")) m_gameEngine.setMaxBalls(json["maxBalls"].toInt());
+        if (json.contains("gridIndex")) m_gameEngine.setGameMode(json["gridIndex"].toInt());
+        if (json.contains("numChances")) m_gameEngine.setNumChances(json["numChances"].toInt());
+        
+        saveConfig();
+        
+        // Broadcast para todos ficarem sincronizados
+        QJsonObject broadcast;
+        broadcast["action"] = "config_updated";
+        broadcast["maxBalls"] = m_gameEngine.getMaxBalls();
+        broadcast["gridIndex"] = m_gameEngine.getGameMode();
+        broadcast["numChances"] = m_gameEngine.getNumChances();
+        broadcastJson(broadcast);
+        
+        qInfo() << "Configuração global atualizada pelo administrador";
     }
     else if (action == "register_random") {
         int count = json["count"].toInt();

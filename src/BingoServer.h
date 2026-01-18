@@ -22,6 +22,9 @@ public:
     void loadSales();
     void saveSales();
 
+    void loadConfig();
+    void saveConfig();
+
 private Q_SLOTS:
     void onNewConnection();
     void processTextMessage(QString message);
@@ -39,6 +42,7 @@ private:
     
     BingoGameEngine m_gameEngine;
     QString m_salesPath;
+    QString m_configPath;
     QMap<int, QString> m_saleTimestamps; // Mapeia ID da cartela para o timestamp da venda
 };
 

@@ -146,3 +146,41 @@ Validar se o sorteio e a verificação de cartelas funcionam conforme esperado n
 
 =========================================================================================
 Este projeto trabalha com sub-pastas, não trabalhamos com sub-dominios.
+
+
+Painel: vendasys.com.br/sorteio/panel.html
+Sorteio: vendasys.com.br/sorteio/index.html
+Vendas: vendasys.com.br/sorteio/vendas.html
+
+
+
+======================================================================================================
+TIPO DE SORTEIO
+======================================================================================================
+Agora vamos para uma parte fundamental desses sistema de sorteios de bingo, é a parte onde o operador do 
+sorteio diz para o sistema que tipo de parte ele vai utilizar por exemplo
+O operador pode definir que o sorteio está considerando que o globo possui 75 bolas e a cartela possui 25 numeros 775x25.
+Ou pode definir que o globo tem 75 bolas e a cartela tem 5 numeros  75x5.
+Alias, me diga uma coisa, que tipo de definição atualmente estamos usando para nossos testes?
+
+
+==================================================================================================
+CHANCES
+==================================================================================================
+Existe um recurso nesse sistema que vai ser muito importante, nós chamamos de chances.
+ Um sorteio normalmente considera somente uma chance do cliente ganhar, ou seja
+ o cliente está concorrendo com apenas uma linha de dados, mas acontece que na prática as gráficas
+ imprimem cartelas com mais de uma chance, funciona assim:
+ A cartela, uma impressão pode vir  já com  a linha 1,2 e 3, ou seja 3 chances,  e isso deve ser definidio
+ nessa próxima tela que vamos fazer e considerado na hora dos sorteios. 
+ Essa história de chances vai mudar alguns modos de trabalho do sistema, pois por exemplo, se o operador estiver
+ registrando vendas para um sorteio de 3 chances, quando ele estiver cadastrando a cartela 4 por exemplo
+ TEM  que ser registradas automaticamente a 4,5 e a 6, ou seja,  as chances muda muita coisa no nosso sistema 
+ deu pra você entender?
+ Com relação ao registro em lotes, no caso o padrão que usamos são lotes de 100 canhotos, e no caso
+ da inclusão das chances praticamente vai continuar do mesmo jeito, se antes o canhoto registrado tinha 
+ apenas umnumero de cartela, agora o canhoto terá por exemplo (3 numeros de cartelas), só quero que você considere isso
+ praticamente os canhotos não mudam, mas agora eles podem conter mais de um numero de cartelasendo que só vai ser
+ bipado um número, que é o dá primeira cartela das N chances, digo bipado, mas claro que serão
+ registrados todos os números de cartelas que envolve às chances daquele sorteio.
+

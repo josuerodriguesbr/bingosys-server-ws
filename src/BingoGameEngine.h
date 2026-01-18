@@ -27,6 +27,13 @@ public:
     // Configura qual "grid" usar (0 = 1ª parte, 1 = 2ª parte...)
     // Isso define o modo de jogo (ex: 15x60 ou 25x75)
     void setGameMode(int gridIndex);
+    int getGameMode() const { return m_currentGridIndex; }
+
+    void setMaxBalls(int max) { m_maxBalls = max; }
+    int getMaxBalls() const { return m_maxBalls; }
+
+    void setNumChances(int chances) { m_numChances = chances; }
+    int getNumChances() const { return m_numChances; }
 
     // Inicia um novo sorteio (limpa estado)
     // Se houver cartelas registradas, usa apenas elas.
@@ -58,6 +65,8 @@ public:
 private:
     QVector<BingoTicket> m_allTickets; // Todas as cartelas carregadas
     int m_currentGridIndex; // Qual grade estamos jogando
+    int m_maxBalls;         // Limite de bolas no globo (ex: 75)
+    int m_numChances;       // Quantidade de chances (cartelas em sequencia)
     
     QList<int> m_drawnNumbers; // Histórico do sorteio atual
     
