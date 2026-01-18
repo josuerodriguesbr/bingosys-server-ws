@@ -195,6 +195,9 @@
         const elLog = document.getElementById('recent-log');
         const elMode = document.getElementById('mode-display');
 
+        let currentConfig = { maxBalls: 75, numChances: 1, gridIndex: 0 };
+        let availableModes = [];
+
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const val = input.value.trim();
@@ -211,17 +214,28 @@
 
         bingoSocket.on('sync_status', (data) => {
             elTotal.textContent = data.totalRegistered;
-            if (data.maxBalls) {
-                updateModeDisplay(data.maxBalls, data.numChances);
+
+            if (data.modes) availableModes = data.modes;
+
+            if (data.maxBalls !== undefined) {
+                currentConfig.maxBalls = data.maxBalls;
+                currentConfig.gridIndex = data.gridIndex;
+                currentConfig.numChances = data.numChances;
+                updateModeDisplay();
             }
         });
 
         bingoSocket.on('config_updated', (data) => {
-            updateModeDisplay(data.maxBalls, data.numChances);
+            currentConfig.maxBalls = data.maxBalls;
+            currentConfig.gridIndex = data.gridIndex;
+            currentConfig.numChances = data.numChances;
+            updateModeDisplay();
         });
 
-        function updateModeDisplay(maxBalls, numChances) {
-            elMode.textContent = `${maxBalls} Bolas | ${numChances} Chance(s)`;
+        function updateModeDisplay() {
+            const mode = availableModes.find(m => m.balls == currentConfig.maxBalls && m.grid == currentConfig.gridIndex);
+            const modeName = mode ? mode.name : `${currentConfig.maxBalls} Bolas`;
+            elMode.textContent = `${modeName} | ${currentConfig.numChances} Chance(s)`;
         }
 
         bingoSocket.on('ticket_registered', (data) => {

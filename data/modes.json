@@ -1,0 +1,13 @@
+[
+    {"id": 0, "name": "Bingo 60 x 15 (Tradição)", "balls": 60, "grid": 0},
+    {"id": 1, "name": "Bingo 60 x 20 (Rápido)", "balls": 60, "grid": 1},
+    {"id": 2, "name": "Bingo 75 x 15 (Clássico)", "balls": 75, "grid": 2},
+    {"id": 3, "name": "Bingo 75 x 25 (Super)", "balls": 75, "grid": 3},
+    {"id": 4, "name": "Bingo 90 x 15 (Internacional)", "balls": 90, "grid": 4},
+    {"id": 5, "name": "Bingo 75 x 10 (Curto)", "balls": 75, "grid": 5},
+    {"id": 6, "name": "Bingo 75 x 05 (Express)", "balls": 75, "grid": 6},
+    {"id": 7, "name": "Bingo 30 x 05 (Pocket)", "balls": 30, "grid": 7},
+    {"id": 8, "name": "Bingo 50 x 20 (Médio)", "balls": 50, "grid": 8},
+    {"id": 9, "name": "Bingo 50 x 05 (Flash)", "balls": 50, "grid": 9},
+    {"id": 10, "name": "Bingo 90 x 25 (Full)", "balls": 90, "grid": 10}
+]

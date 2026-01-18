@@ -184,3 +184,33 @@ Existe um recurso nesse sistema que vai ser muito importante, nós chamamos de c
  bipado um número, que é o dá primeira cartela das N chances, digo bipado, mas claro que serão
  registrados todos os números de cartelas que envolve às chances daquele sorteio.
 
+ ================================================================================================
+cd /var/www/bingosys-server-ws
+git pull origin main
+qmake
+make -j$(nproc)
+systemctl restart bingosys.service
+==================================================================================================
+
+
+
+===========================================================================================================
+PARTES DA LINHA DE DADOS
+===========================================================================================================
+0000019
+-011012151922343536374246535558  1ª PARTE: 60x15
+-0103060914171923272931333536414453575960   2ª PARTE: 60x20
+-030508202125334042525459656775   3ª PARTE: 75x15
+-02040506111719202126313435414446505354556568697072   4ª PARTE: 75x25
+-030912172123354045465459697887   5ª PARTE: 90x15
+-04112830404349546773   6ª PARTE: 75x10
+-1225414672   7ª PARTE: 75x05
+-1011121523   8ª PARTE: 30x05
+-0407091011141516202223243132343644464849   9ª PARTE: 50x20
+-0121304147   10ª PARTE: 50x05
+-08254146610222375669063035498305203159810723384775   11ª PARTE: 90x25
+
+O exemplo da linha de dados é a linha 1
+Essa designação  "Parte  não serve para usar lá nas preferencias não porque o 
+operador não vai nem saber do que se trata, mas por essa tabela você deve encontrar 
+uma forma de colocar lá talvez até somente uma lista para ser selecionada, o que você acha?

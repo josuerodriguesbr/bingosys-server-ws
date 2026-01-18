@@ -43,6 +43,7 @@ private:
     BingoGameEngine m_gameEngine;
     QString m_salesPath;
     QString m_configPath;
+    QJsonArray m_modes; // Lista de modos carregados do modes.json
     QMap<int, QString> m_saleTimestamps; // Mapeia ID da cartela para o timestamp da venda
 };
 

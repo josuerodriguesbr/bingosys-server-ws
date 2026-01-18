@@ -42,11 +42,21 @@ void BingoServer::loadTickets(const QVector<BingoTicket> &tickets)
 void BingoServer::setSalesPath(const QString &path)
 {
     m_salesPath = path;
-    // Define o caminho do config na mesma pasta
+    // Define caminhos na mesma pasta que as vendas
     QFileInfo info(path);
-    m_configPath = info.absolutePath() + "/config.json";
+    QString baseDir = info.absolutePath();
+    m_configPath = baseDir + "/config.json";
     
+    // Carrega configurações persistentes
     loadConfig();
+
+    // Carrega a tabela de modos se existir
+    QFile modesFile(baseDir + "/modes.json");
+    if (modesFile.open(QIODevice::ReadOnly)) {
+        m_modes = QJsonDocument::fromJson(modesFile.readAll()).array();
+        modesFile.close();
+        qInfo() << "Tabela de modos carregada:" << m_modes.size() << "opções.";
+    }
 }
 
 void BingoServer::loadSales()
@@ -170,6 +180,7 @@ void BingoServer::onNewConnection()
     sync["maxBalls"] = m_gameEngine.getMaxBalls();
     sync["gridIndex"] = m_gameEngine.getGameMode();
     sync["numChances"] = m_gameEngine.getNumChances();
+    sync["modes"] = m_modes;
 
     sendJson(pSocket, sync);
 }

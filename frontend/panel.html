@@ -465,21 +465,9 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Quantidade de Bolas no Globo</label>
-                <select id="cfg-balls" class="form-select">
-                    <option value="60">60 Bolas</option>
-                    <option value="75" selected>75 Bolas</option>
-                    <option value="90">90 Bolas</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Tipo de Cartela (Grade/Parte)</label>
-                <select id="cfg-grid" class="form-select">
-                    <option value="0">1ª Parte (Padrão)</option>
-                    <option value="1">2ª Parte</option>
-                    <option value="2">3ª Parte</option>
-                    <option value="3">4ª Parte</option>
+                <label class="form-label">Modo de Jogo</label>
+                <select id="cfg-mode" class="form-select">
+                    <!-- Dinamicamente preenchido -->
                 </select>
             </div>
 
@@ -514,8 +502,10 @@
         let config = {
             maxBalls: 75,
             gridIndex: 0,
-            numChances: 1
+            numChances: 1,
+            modeName: " Bingo 75 x 15 (Clássico)"
         };
+        let availableModes = [];
 
         // Socket Events
         bingoSocket.on('connected', () => {
@@ -552,6 +542,12 @@
             if (data.maxBalls) config.maxBalls = data.maxBalls;
             if (data.gridIndex) config.gridIndex = data.gridIndex;
             if (data.numChances) config.numChances = data.numChances;
+
+            if (data.modes) {
+                availableModes = data.modes;
+                populateModesList();
+            }
+
             updateConfigBadge();
         });
 
@@ -562,9 +558,7 @@
             updateConfigBadge();
 
             // Sincroniza campos se o administrador estiver com o modal aberto
-            document.getElementById('cfg-balls').value = data.maxBalls;
-            document.getElementById('cfg-grid').value = data.gridIndex;
-            document.getElementById('cfg-chances').value = data.numChances;
+            syncSettingsFields();
         });
 
         bingoSocket.on('number_drawn', (data) => {
@@ -730,9 +724,15 @@
         // Settings Modal Logic
         function openSettings() {
             document.getElementById('modal-settings').style.display = 'flex';
-            // Preenche campos com config atual
-            document.getElementById('cfg-balls').value = config.maxBalls;
-            document.getElementById('cfg-grid').value = config.gridIndex;
+            syncSettingsFields();
+        }
+
+        function syncSettingsFields() {
+            // Encontra o modo atual na lista
+            const mode = availableModes.find(m => m.balls == config.maxBalls && m.grid == config.gridIndex);
+            if (mode) {
+                document.getElementById('cfg-mode').value = mode.id;
+            }
             document.getElementById('cfg-chances').value = config.numChances;
         }
 
@@ -741,23 +741,38 @@
         }
 
         function saveSettings() {
-            const maxBalls = parseInt(document.getElementById('cfg-balls').value);
-            const gridIndex = parseInt(document.getElementById('cfg-grid').value);
+            const modeId = parseInt(document.getElementById('cfg-mode').value);
             const numChances = parseInt(document.getElementById('cfg-chances').value);
 
+            const mode = availableModes.find(m => m.id === modeId);
+            if (!mode) return;
+
             bingoSocket.send("update_config", {
-                maxBalls,
-                gridIndex,
-                numChances
+                maxBalls: mode.balls,
+                gridIndex: mode.grid,
+                numChances: numChances
             });
 
             closeSettings();
         }
 
+        function populateModesList() {
+            const select = document.getElementById('cfg-mode');
+            select.innerHTML = "";
+            availableModes.forEach(mode => {
+                const opt = document.createElement('option');
+                opt.value = mode.id;
+                opt.textContent = mode.name;
+                select.appendChild(opt);
+            });
+        }
+
         function updateConfigBadge() {
             const badge = document.getElementById('mode-display');
             if (badge) {
-                badge.textContent = `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1} | ${config.numChances} Chance(s)`;
+                const mode = availableModes.find(m => m.balls == config.maxBalls && m.grid == config.gridIndex);
+                const modeName = mode ? mode.name : `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1}`;
+                badge.textContent = `${modeName} | ${config.numChances} Chance(s)`;
             }
             // Atualiza o placeholder do manual input
             elManualInput.max = config.maxBalls;
