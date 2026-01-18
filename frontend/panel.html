@@ -181,6 +181,79 @@
             border-left-color: var(--warning);
         }
 
+        /* Bingo Grid Visualization */
+        .ticket-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .ticket-card.winner {
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+        }
+
+        .ticket-card.near-1 {
+            border-color: var(--warning);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .bingo-container {
+            user-select: none;
+        }
+
+        .bingo-labels {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            text-align: center;
+            font-weight: 900;
+            color: var(--accent-glow);
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+            letter-spacing: 2px;
+        }
+
+        .bingo-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+
+        .bingo-cell {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .bingo-cell.marked {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: var(--success);
+            color: white;
+            box-shadow: inset 0 0 8px rgba(34, 197, 94, 0.2);
+        }
+
         @keyframes pulse {
             0% {
                 box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
@@ -674,47 +747,85 @@
         }
 
         function updateWinners(winners) {
-            elListWinners.innerHTML = '';
-
-            // Mostrar apenas os 3 primeiros
-            const showCount = 3;
-            winners.slice(0, showCount).forEach(id => {
-                const li = document.createElement('li');
-                li.className = 'ticket-item winner animate-fade-in';
-                li.innerHTML = `<span>Cartela #${id}</span> <span>🏆</span>`;
-                elListWinners.appendChild(li);
-            });
-
-            // Indicador de mais itens
-            if (winners.length > showCount) {
-                elMoreWinners.textContent = `+ ${winners.length - showCount} GANHADORES`;
+            elListWinners.innerHTML = "";
+            if (winners.length > 5 && !showAllWinners) {
                 elMoreWinners.style.display = 'block';
+                elMoreWinners.textContent = `+ ${winners.length - 5} ganhadores`;
+                winners = winners.slice(0, 5);
             } else {
                 elMoreWinners.style.display = 'none';
             }
+
+            winners.forEach(ticket => {
+                const div = document.createElement('div');
+                div.className = 'ticket-card winner';
+
+                let gridHtml = renderBingoGrid(ticket.numbers);
+
+                div.innerHTML = `
+                    <div class="ticket-header">
+                        <span style="color: var(--success)">🏆 #${ticket.barcode}</span>
+                        <span>GANHOU!</span>
+                    </div>
+                    ${gridHtml}
+                `;
+                elListWinners.appendChild(div);
+            });
         }
 
         function updateNearWins(nearWins) {
-            // Focus on "1" missing
-            if (nearWins["1"]) {
-                const ids = nearWins["1"];
-                elListNear1.innerHTML = '';
+            elListNear1.innerHTML = "";
+            let list1 = nearWins["1"] || [];
 
-                const showCount = 3;
-                ids.slice(0, showCount).forEach(id => {
-                    const li = document.createElement('li');
-                    li.className = 'ticket-item near-1 animate-fade-in';
-                    li.innerHTML = `<span>Cartela #${id}</span> <span>Falta 1</span>`;
-                    elListNear1.appendChild(li);
-                });
+            if (list1.length > 5 && !showAllNear1) {
+                elMoreNear1.style.display = 'block';
+                elMoreNear1.textContent = `+ ${list1.length - 5} armadas`;
+                list1 = list1.slice(0, 5);
+            } else {
+                elMoreNear1.style.display = 'none';
+            }
 
-                if (ids.length > showCount) {
-                    elMoreNear1.textContent = `+ ${ids.length - showCount} CARTELAS BOA`;
-                    elMoreNear1.style.display = 'block';
-                } else {
-                    elMoreNear1.style.display = 'none';
+            list1.forEach(ticket => {
+                const div = document.createElement('div');
+                div.className = 'ticket-card near-1';
+
+                let gridHtml = renderBingoGrid(ticket.numbers);
+
+                div.innerHTML = `
+                    <div class="ticket-header">
+                        <span style="color: var(--warning)">🔥 #${ticket.barcode}</span>
+                        <span>FALTA 1</span>
+                    </div>
+                    ${gridHtml}
+                `;
+                elListNear1.appendChild(div);
+            });
+        }
+
+        function renderBingoGrid(numbers) {
+            if (!numbers || numbers.length === 0) return "";
+
+            const rows = numbers.length / 5;
+            let html = `
+                <div class="bingo-container">
+                    <div class="bingo-labels">
+                        <div>B</div><div>I</div><div>N</div><div>G</div><div>O</div>
+                    </div>
+                    <div class="bingo-grid" style="grid-template-rows: repeat(${rows}, 1fr)">
+            `;
+
+            // Preenchimento coluna-primeiro (B-I-N-G-O)
+            // Para cada linha r, visitamos cada coluna c
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const idx = (c * rows) + r;
+                    const val = numbers[idx];
+                    const isMarked = drawnNumbers.includes(val);
+                    html += `<div class="bingo-cell ${isMarked ? 'marked' : ''}">${val.toString().padStart(2, '0')}</div>`;
                 }
             }
+            html += `</div></div>`;
+            return html;
         }
 
         function resetBoard() {

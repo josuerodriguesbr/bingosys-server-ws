@@ -24,5 +24,6 @@ O sistema está 100% funcional na nova estrutura de sub-pasta.
 
 6.  **Modos Amigáveis**: O operador agora escolhe modos como "Bingo 75 x 15 (Clássico)" via interface, sem precisar lidar com índices técnicos.
 7.  **Sincronização Total**: A lista de modos é carregada de `modes.json` e sincronizada automaticamente entre Painel Admin e Tela de Vendas.
-8.  **Sistema de Chances**: Mantido o registro automático em lote (ex: bipar ID 10 registra 10, 11, 12 se chances=3).
+8.  **Visualização em Grade**: Cartelas "armadas" e vencedoras são exibidas no formato BINGO (5 colunas) com destaque para números marcados.
 9.  **Persistência**: Todas as preferências são salvas em `config.json` e os modos em `modes.json`.
+10. **Acessibilidade**: Todo o sistema segue um tema Dark sólido para conforto visual do operador.
