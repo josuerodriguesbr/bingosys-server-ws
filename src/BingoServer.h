@@ -36,6 +36,7 @@ private:
     void sendJson(QWebSocket *client, const QJsonObject &json);
     void broadcastJson(const QJsonObject &json);
     void handleJsonMessage(QWebSocket *client, const QJsonObject &json);
+    QJsonObject getTicketDetailsJson(int ticketId);
 
     QWebSocketServer *m_pWebSocketServer;
     QList<QWebSocket *> m_clients;

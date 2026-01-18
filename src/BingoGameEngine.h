@@ -49,6 +49,7 @@ public:
     QSet<int> getRegisteredTickets() const { return m_registeredTickets; }
     const QVector<BingoTicket>& getAllTickets() const { return m_allTickets; }
     QString getFormattedBarcode(int ticketId) const;
+    QVector<int> getTicketNumbers(int ticketId) const;
 
     // Processa um numero sorteado
     // Retorna true se houver novidades (novos ganhadores ou armados)

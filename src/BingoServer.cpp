@@ -164,15 +164,19 @@ void BingoServer::onNewConnection()
     sync["drawnNumbers"] = drawnArray;
 
     QJsonArray winnersArray;
-    for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
+    for(int w : m_gameEngine.getWinners()) {
+        winnersArray.append(getTicketDetailsJson(w));
+    }
     sync["winners"] = winnersArray;
 
     QJsonObject nearWinObj;
     auto nearWins = m_gameEngine.getNearWinTickets();
     for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
-        QJsonArray idsInfo;
-        for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
-        nearWinObj[QString::number(it.key())] = idsInfo;
+        QJsonArray ticketInfos;
+        for(int id : it.value()) {
+            ticketInfos.append(getTicketDetailsJson(id));
+        }
+        nearWinObj[QString::number(it.key())] = ticketInfos;
     }
     sync["near_wins"] = nearWinObj;
     
@@ -251,14 +255,14 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             
             // Winners
             QJsonArray winnersArray;
-            for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
+            for(int w : m_gameEngine.getWinners()) winnersArray.append(getTicketDetailsJson(w));
             updateMsg["winners"] = winnersArray;
             
             QJsonObject nearWinObj;
             auto nearWins = m_gameEngine.getNearWinTickets();
             for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
                 QJsonArray idsInfo;
-                for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
+                for(int id : it.value()) idsInfo.append(getTicketDetailsJson(id));
                 nearWinObj[QString::number(it.key())] = idsInfo;
             }
             updateMsg["near_wins"] = nearWinObj;
@@ -274,15 +278,15 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             broadcast["number"] = cancelledNum;
             
             // Winners e NearWins atualizados
-            QJsonArray winnersArray;
-            for(int w : m_gameEngine.getWinners()) winnersArray.append(m_gameEngine.getFormattedBarcode(w));
-            broadcast["winners"] = winnersArray;
-
+            QJsonArray winnersArr;
+            for(int w : m_gameEngine.getWinners()) winnersArr.append(getTicketDetailsJson(w));
+            broadcast["winners"] = winnersArr;
+            
             QJsonObject nearWinObj;
             auto nearWins = m_gameEngine.getNearWinTickets();
             for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
                 QJsonArray idsInfo;
-                for(int id : it.value()) idsInfo.append(m_gameEngine.getFormattedBarcode(id));
+                for(int id : it.value()) idsInfo.append(getTicketDetailsJson(id));
                 nearWinObj[QString::number(it.key())] = idsInfo;
             }
             broadcast["near_wins"] = nearWinObj;
@@ -400,4 +404,18 @@ void BingoServer::socketDisconnected()
         m_clients.removeAll(pClient);
         pClient->deleteLater();
     }
+}
+QJsonObject BingoServer::getTicketDetailsJson(int ticketId)
+{
+    QJsonObject obj;
+    obj["barcode"] = m_gameEngine.getFormattedBarcode(ticketId);
+    obj["ticketId"] = ticketId;
+    
+    QJsonArray nums;
+    for(int n : m_gameEngine.getTicketNumbers(ticketId)) {
+        nums.append(n);
+    }
+    obj["numbers"] = nums;
+    
+    return obj;
 }

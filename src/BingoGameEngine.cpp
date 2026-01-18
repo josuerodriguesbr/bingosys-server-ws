@@ -222,3 +222,14 @@ bool BingoGameEngine::isValidCheckDigit(int ticketId, int checkDigit) const
 {
     return m_idToDigit.contains(ticketId) && m_idToDigit.value(ticketId) == checkDigit;
 }
+
+QVector<int> BingoGameEngine::getTicketNumbers(int ticketId) const
+{
+    int idx = ticketId - 1;
+    if (idx < 0 || idx >= m_allTickets.size()) return {};
+    
+    const auto &ticket = m_allTickets[idx];
+    if (m_currentGridIndex < 0 || m_currentGridIndex >= ticket.grids.size()) return {};
+    
+    return ticket.grids[m_currentGridIndex];
+}

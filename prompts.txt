@@ -214,3 +214,28 @@ O exemplo da linha de dados é a linha 1
 Essa designação  "Parte  não serve para usar lá nas preferencias não porque o 
 operador não vai nem saber do que se trata, mas por essa tabela você deve encontrar 
 uma forma de colocar lá talvez até somente uma lista para ser selecionada, o que você acha?
+
+
+================================================================================================
+VISUALIZAÇÃO DA CARTELA
+================================================================================================
+As linhas de código possuem uma certa organização nos numeros, apessar de eles estarem em linha, eles 
+estão organizados para aparecer na tela dentro de uma grade, com o nome BINGO no cabeçalho
+É só dividi-los em 5 colunas e a quantidade de linhas depende do tipo, do modo , ou seja dependeda quantidade de numeros
+
+Agora vamos para uma parte muito bonita!
+Aonde aparece esses cartoes só com o numero sequencial  da catela, vamos colocar a grade 
+representando a cartela de bingo.
+E no caso da lista de cartelas armadas, vamos colorir os numeros com cores suaves mesmo que indiqueos numeros que já foram marcados
+e os numeros que não foram marcados.
+Veja a disposição da cartela 75x15 da primeira linha de dados:
+
+Essas são as dezenas separadas
+03 05 08 20 21 25 33 40 42 52 54 59 65 67 75
+
+Agora como fica a distribuição na grade
+03 20 33 52 65
+05 21 40 54 67
+08 25 42 59 75
+
+Será que dá pra entender como vai ficar nas outras partes?
