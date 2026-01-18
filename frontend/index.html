@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BingoSys - Painel Ao Vivo</title>
+    <title>BingoSys - Sorteio Ao Vivo</title>
     <link rel="stylesheet" href="css/style.css">
 
     <style>
@@ -472,9 +472,7 @@
     <nav class="top-navbar">
         <div class="nav-logo">BINGOSYS</div>
         <div id="game-status-badge" class="nav-actions">
-            <div id="mode-display" class="mode-badge">75 Bolas | 1 Chance</div>
-            <a href="vendas.html" class="nav-btn">🛒 VENDAS</a>
-            <button onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
+            <div id="mode-display" class="mode-badge">Sincronizando...</div>
         </div>
     </nav>
 
@@ -509,21 +507,7 @@
                 </div>
             </div>
 
-            <!-- Admin Controls Overlay -->
-            <div class="admin-controls">
-                <div
-                    style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1rem; margin-right: 0.5rem;">
-                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="90">
-                    <button id="btn-confirm" onclick="drawManual()"
-                        style="background: var(--accent-primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600;">CONFIRMAR</button>
-                </div>
-                <button id="btn-random" onclick="drawRandomNumber()"
-                    style="background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; margin-right: 0.5rem;">ALEATÓRIO</button>
-                <button id="btn-undo" onclick="undoLast()"
-                    style="background: var(--warning); color: #000; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-right: 0.5rem;">DESFAZER</button>
-                <button id="btn-reset" onclick="requestNewGame()"
-                    style="background: var(--danger); color: white; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem;">RESET</button>
-            </div>
+            <!-- Admin Controls Removed for Public View -->
         </main>
 
         <!-- Right: Winners -->
@@ -536,34 +520,7 @@
         </aside>
     </div>
 
-    <!-- Modal Preferences -->
-    <div id="modal-settings" class="modal-overlay">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div class="modal-title">Preferências do Sorteio</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Modo de Jogo</label>
-                <select id="cfg-mode" class="form-select">
-                    <!-- Dinamicamente preenchido -->
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Quantidade de Chances</label>
-                <input type="number" id="cfg-chances" class="form-input" value="1" min="1" max="10">
-                <small style="color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.25rem; display: block;">
-                    Um bip registrará esta quantidade de cartelas em sequência.
-                </small>
-            </div>
-
-            <div class="modal-footer">
-                <button onclick="closeSettings()" class="nav-btn">Cancelar</button>
-                <button onclick="saveSettings()" class="nav-btn primary">Salvar Alterações</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modal preferences removed for public view -->
 
     <script src="js/socket.js"></script>
     <script>
@@ -686,49 +643,7 @@
             resetBoard();
         });
 
-        // Admin Actions
-        function requestNewGame() {
-            if (confirm("Deseja iniciar um novo jogo? Isso limpará o sorteio atual.")) {
-                bingoSocket.send("start_game");
-            }
-        }
-
-        function undoLast() {
-            if (drawnNumbers.length === 0) return;
-            if (confirm("Deseja cancelar a última bola sorteada (" + drawnNumbers[drawnNumbers.length - 1] + ")?")) {
-                bingoSocket.send("undo_last");
-            }
-        }
-
-        function drawRandomNumber() {
-            if (drawnNumbers.length >= config.maxBalls) {
-                alert("Todos os números já foram sorteados!");
-                return;
-            }
-
-            let num;
-            do {
-                num = Math.floor(Math.random() * config.maxBalls) + 1;
-            } while (drawnNumbers.includes(num));
-
-            bingoSocket.send("draw_number", { number: num });
-        }
-
-        function drawManual() {
-            const val = parseInt(elManualInput.value);
-            if (isNaN(val) || val < 1 || val > config.maxBalls) {
-                alert("Por favor, digite um número entre 1 e " + config.maxBalls);
-                return;
-            }
-
-            if (drawnNumbers.includes(val)) {
-                alert("Este número já foi sorteado!");
-                return;
-            }
-
-            bingoSocket.send("draw_number", { number: val });
-            elManualInput.value = '';
-        }
+        // Admin Actions Removed for Public View
 
         function updateDisplay(number) {
             // Update Big Ball
@@ -838,40 +753,7 @@
             drawnNumbers = [];
         }
 
-        // Settings Modal Logic
-        function openSettings() {
-            document.getElementById('modal-settings').style.display = 'flex';
-            syncSettingsFields();
-        }
-
-        function syncSettingsFields() {
-            // Encontra o modo atual na lista
-            const mode = availableModes.find(m => m.balls == config.maxBalls && m.grid == config.gridIndex);
-            if (mode) {
-                document.getElementById('cfg-mode').value = mode.id;
-            }
-            document.getElementById('cfg-chances').value = config.numChances;
-        }
-
-        function closeSettings() {
-            document.getElementById('modal-settings').style.display = 'none';
-        }
-
-        function saveSettings() {
-            const modeId = parseInt(document.getElementById('cfg-mode').value);
-            const numChances = parseInt(document.getElementById('cfg-chances').value);
-
-            const mode = availableModes.find(m => m.id === modeId);
-            if (!mode) return;
-
-            bingoSocket.send("update_config", {
-                maxBalls: mode.balls,
-                gridIndex: mode.grid,
-                numChances: numChances
-            });
-
-            closeSettings();
-        }
+        // Settings Modal Logic Removed for Public View
 
         function populateModesList() {
             const select = document.getElementById('cfg-mode');
