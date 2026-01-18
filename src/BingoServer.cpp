@@ -13,7 +13,8 @@ BingoServer::BingoServer(quint16 port, QObject *parent) :
     QObject(parent),
     m_pWebSocketServer(new QWebSocketServer(QStringLiteral("BingoSys Server"),
                                             QWebSocketServer::NonSecureMode, this)),
-    m_port(port)
+    m_port(port),
+    m_historyLimit(10) // Padrão: 10 bolas
 {
 }
 
@@ -121,10 +122,12 @@ void BingoServer::loadConfig()
     if (obj.contains("maxBalls")) m_gameEngine.setMaxBalls(obj["maxBalls"].toInt());
     if (obj.contains("gridIndex")) m_gameEngine.setGameMode(obj["gridIndex"].toInt());
     if (obj.contains("numChances")) m_gameEngine.setNumChances(obj["numChances"].toInt());
+    if (obj.contains("historyLimit")) m_historyLimit = obj["historyLimit"].toInt();
 
     qInfo() << "Configurações carregadas: MaxBalls=" << m_gameEngine.getMaxBalls() 
             << "Grade=" << m_gameEngine.getGameMode() 
-            << "Chances=" << m_gameEngine.getNumChances();
+            << "Chances=" << m_gameEngine.getNumChances()
+            << "HistoryLimit=" << m_historyLimit;
 }
 
 void BingoServer::saveConfig()
@@ -137,6 +140,7 @@ void BingoServer::saveConfig()
     obj["maxBalls"] = m_gameEngine.getMaxBalls();
     obj["gridIndex"] = m_gameEngine.getGameMode();
     obj["numChances"] = m_gameEngine.getNumChances();
+    obj["historyLimit"] = m_historyLimit;
 
     file.write(QJsonDocument(obj).toJson());
     file.close();
@@ -184,7 +188,8 @@ void BingoServer::onNewConnection()
     sync["maxBalls"] = m_gameEngine.getMaxBalls();
     sync["gridIndex"] = m_gameEngine.getGameMode();
     sync["numChances"] = m_gameEngine.getNumChances();
-    sync["modes"] = m_modes;
+    sync["historyLimit"] = m_historyLimit;
+    sync["modes"] = m_modes; // Envia a lista de modos carregada
 
     sendJson(pSocket, sync);
 }
@@ -339,16 +344,18 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         if (json.contains("maxBalls")) m_gameEngine.setMaxBalls(json["maxBalls"].toInt());
         if (json.contains("gridIndex")) m_gameEngine.setGameMode(json["gridIndex"].toInt());
         if (json.contains("numChances")) m_gameEngine.setNumChances(json["numChances"].toInt());
+        if (json.contains("historyLimit")) m_historyLimit = json["historyLimit"].toInt();
         
         saveConfig();
         
-        // Broadcast para todos ficarem sincronizados
-        QJsonObject broadcast;
-        broadcast["action"] = "config_updated";
-        broadcast["maxBalls"] = m_gameEngine.getMaxBalls();
-        broadcast["gridIndex"] = m_gameEngine.getGameMode();
-        broadcast["numChances"] = m_gameEngine.getNumChances();
-        broadcastJson(broadcast);
+        // Broadcast para todos os clientes
+        QJsonObject reply;
+        reply["action"] = "config_updated";
+        reply["maxBalls"] = m_gameEngine.getMaxBalls();
+        reply["gridIndex"] = m_gameEngine.getGameMode();
+        reply["numChances"] = m_gameEngine.getNumChances();
+        reply["historyLimit"] = m_historyLimit;
+        broadcastJson(reply);
         
         qInfo() << "Configuração global atualizada pelo administrador";
     }

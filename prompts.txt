@@ -239,3 +239,14 @@ Agora como fica a distribuição na grade
 08 25 42 59 75
 
 Será que dá pra entender como vai ficar nas outras partes?
+
+=========================================================================================
+TELA DO CLIENTE 
+=========================================================================================
+Essa tela é diferente da tela do operador!
+Na tela para os clientes, só deve aparecer uma quantidade X de ultimos numeros chamados, 
+antes era assim lembra?
+Vamos aproveitar e colocar lá nas preferências quantas ultimas bolas ele quer 
+que apareça para os cliente.
+
+========================================================================================

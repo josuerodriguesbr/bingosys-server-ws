@@ -558,6 +558,14 @@
                 </small>
             </div>
 
+            <div class="form-group">
+                <label class="form-label">Limite de Histórico (Público)</label>
+                <input type="number" id="cfg-history-limit" class="form-input" value="10" min="1" max="50">
+                <small style="color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.25rem; display: block;">
+                    Quantidade de últimas bolas que aparecem na tela do cliente.
+                </small>
+            </div>
+
             <div class="modal-footer">
                 <button onclick="closeSettings()" class="nav-btn">Cancelar</button>
                 <button onclick="saveSettings()" class="nav-btn primary">Salvar Alterações</button>
@@ -621,6 +629,7 @@
             if (data.maxBalls) config.maxBalls = data.maxBalls;
             if (data.gridIndex) config.gridIndex = data.gridIndex;
             if (data.numChances) config.numChances = data.numChances;
+            if (data.historyLimit) config.historyLimit = data.historyLimit;
 
             if (data.modes) {
                 availableModes = data.modes;
@@ -634,6 +643,7 @@
             config.maxBalls = data.maxBalls;
             config.gridIndex = data.gridIndex;
             config.numChances = data.numChances;
+            config.historyLimit = data.historyLimit;
             updateConfigBadge();
 
             // Sincroniza campos se o administrador estiver com o modal aberto
@@ -851,6 +861,7 @@
                 document.getElementById('cfg-mode').value = mode.id;
             }
             document.getElementById('cfg-chances').value = config.numChances;
+            document.getElementById('cfg-history-limit').value = config.historyLimit || 10;
         }
 
         function closeSettings() {
@@ -860,6 +871,7 @@
         function saveSettings() {
             const modeId = parseInt(document.getElementById('cfg-mode').value);
             const numChances = parseInt(document.getElementById('cfg-chances').value);
+            const historyLimit = parseInt(document.getElementById('cfg-history-limit').value);
 
             const mode = availableModes.find(m => m.id === modeId);
             if (!mode) return;
@@ -867,7 +879,8 @@
             bingoSocket.send("update_config", {
                 maxBalls: mode.balls,
                 gridIndex: mode.grid,
-                numChances: numChances
+                numChances: numChances,
+                historyLimit: historyLimit
             });
 
             closeSettings();

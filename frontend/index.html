@@ -539,7 +539,8 @@
             maxBalls: 75,
             gridIndex: 0,
             numChances: 1,
-            modeName: " Bingo 75 x 15 (Clássico)"
+            modeName: " Bingo 75 x 15 (Clássico)",
+            historyLimit: 10
         };
         let availableModes = [];
 
@@ -608,6 +609,10 @@
             // Remove do array
             drawnNumbers = drawnNumbers.filter(n => n !== num);
 
+            // Limit to historyLimit items in history
+            while (elHistory.children.length > config.historyLimit) {
+                elHistory.removeChild(elHistory.lastChild);
+            }
             // Remove do histórico visual (primeiro filho)
             if (elHistory.firstChild) elHistory.removeChild(elHistory.firstChild);
 
@@ -639,6 +644,38 @@
             if (data.near_wins) updateNearWins(data.near_wins);
         });
 
+        bingoSocket.on('sync_status', (data) => {
+            if (data.historyLimit) config.historyLimit = data.historyLimit;
+            drawnNumbers = data.drawnNumbers || [];
+
+            elHistory.innerHTML = "";
+            const historyToShow = drawnNumbers.slice(-config.historyLimit);
+            historyToShow.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'ball animate-fade-in';
+                ball.textContent = num;
+                elHistory.insertBefore(ball, elHistory.firstChild);
+            });
+
+            if (drawnNumbers.length > 0) {
+                const last = drawnNumbers[drawnNumbers.length - 1];
+                elCurrentBall.textContent = last < 10 ? '0' + last : last;
+            } else {
+                elCurrentBall.textContent = "--";
+            }
+
+            if (data.winners) updateWinners(data.winners);
+            if (data.near_wins) updateNearWins(data.near_wins);
+
+            if (document.getElementById('mode-display')) {
+                document.getElementById('mode-display').textContent = data.modeName || "Bingo";
+            }
+        });
+
+        bingoSocket.on('config_updated', (data) => {
+            if (data.historyLimit) config.historyLimit = data.historyLimit;
+        });
+
         bingoSocket.on('game_started', () => {
             resetBoard();
         });
@@ -659,6 +696,11 @@
             ball.textContent = number;
             // Prepend
             elHistory.insertBefore(ball, elHistory.firstChild);
+
+            // Limit to historyLimit items in history
+            while (elHistory.children.length > config.historyLimit) {
+                elHistory.removeChild(elHistory.lastChild);
+            }
         }
 
         function updateWinners(winners) {
