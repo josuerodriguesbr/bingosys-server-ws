@@ -95,3 +95,54 @@ senha: RootJRP@2026
 
 Você estava no meio do caminho quando ocorreu um erro em você, em sua IDE e você paralisou.
 Por algum motivo você já paralizou e tive que lhe reiniciar já 3 vezes, analise logo  o que está acontecendo ao tentar configurar o sub-dominio https://sorteio;vendasys.com.br
+
+Deu esse erro na última vez:
+…\bingosys-server-ws > where.exe ssh; where.exe plink; where.exe sshpass
+
+C:\Windows\System32\OpenSSH\ssh.exe
+C:\Program Files\PuTTY\plink.exe
+INFORMA�ES: n�o foi poss�vel localizar arquivos para o(s) padr�o(�es) especificado(s).
+
+Você tem que lembrar que estava usando o projeto que esstá no repositório:
+https://github.com/josuerodriguesbr/bingosys-server-ws
+
+Segue o plano de ações que você estava executando:
+Plano de Implementação: Deploy do BingoSys na VPS
+Este plano descreve as etapas para colocar o servidor BingoSys e o frontend na VPS, utilizando o subdomínio sorteio.vendasys.com.br.
+
+Alterações Propostas
+Servidor (C++)
+[MODIFY] 
+main.cpp
+Ajustar o caminho do arquivo de dados (
+base-cartelas.txt
+) para ser relativo ao executável ou configurável via argumento.
+Remover caminhos absolutos do Windows.
+VPS (Infraestrutura)
+[NOVO] Instalação de Dependências
+apt-get update
+apt-get install -y build-essential qtbase5-dev qtwebsockets5-dev certbot python3-certbot-apache
+[NOVO] Configuração do Apache
+Criar VirtualHost para sorteio.vendasys.com.br.
+Ativar módulos proxy, proxy_http e proxy_wstunnel.
+Configurar ProxyPass para o WebSocket na porta 3000.
+Apontar o DocumentRoot para o diretório frontend.
+[NOVO] Serviço Systemd
+Criar /etc/systemd/system/bingosys.service para manter o servidor C++ rodando e reiniciar automaticamente.
+Transferência de Dados
+Upload do arquivo 
+base-cartelas.TXT
+ (204MB) via pscp caso não esteja no Git.
+Plano de Verificação
+Testes Automatizados
+Executar o binário compilado na VPS e verificar se carrega as cartelas com sucesso.
+Verificar o status do serviço systemd: systemctl status bingosys.
+Verificação Manual
+Acessar https://sorteio.vendasys.com.br no navegador.
+Testar a conexão WebSocket através do painel do frontend.
+Validar se o sorteio e a verificação de cartelas funcionam conforme esperado no ambiente de produção.
+
+
+
+=========================================================================================
+Este projeto trabalha com sub-pastas, não trabalhamos com sub-dominios.
