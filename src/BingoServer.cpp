@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDateTime>
+#include <QRandomGenerator>
 
 BingoServer::BingoServer(quint16 port, QObject *parent) :
     QObject(parent),
@@ -345,7 +346,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         const QVector<BingoTicket> &all = m_gameEngine.getAllTickets();
         if (!all.isEmpty()) {
             for (int i = 0; i < count; ++i) {
-                int randomIndex = qrand() % all.size();
+                int randomIndex = QRandomGenerator::global()->bounded(all.size());
                 int id = all[randomIndex].id;
                 m_gameEngine.registerTicket(id);
                 m_saleTimestamps[id] = timestamp + " (Lote)";
