@@ -530,7 +530,7 @@
         const elListNear1 = document.getElementById('list-near-1');
         const elListWinners = document.getElementById('list-winners');
         const elMoreNear1 = document.getElementById('more-near-1');
-        const elManualInput = document.getElementById('manual-num');
+        const elMoreWinners = document.getElementById('more-winners');
 
         // State
         let drawnNumbers = [];
@@ -545,57 +545,9 @@
         let availableModes = [];
 
         // Socket Events
+        // Socket Heartbeat
         bingoSocket.on('connected', () => {
             console.log('Painel conectado!');
-        });
-
-        bingoSocket.on('sync_status', (data) => {
-            // Sincroniza vendas
-            const elPlaying = document.getElementById('playing-count');
-            if (elPlaying) elPlaying.textContent = data.totalRegistered + " CARTELAS EM JOGO";
-
-            // Sincroniza bolas
-            drawnNumbers = data.drawnNumbers || [];
-            elHistory.innerHTML = "";
-            drawnNumbers.forEach(num => {
-                const ball = document.createElement('div');
-                ball.className = 'history-ball';
-                ball.textContent = num < 10 ? '0' + num : num;
-                elHistory.insertBefore(ball, elHistory.firstChild);
-            });
-
-            if (drawnNumbers.length > 0) {
-                const last = drawnNumbers[drawnNumbers.length - 1];
-                elCurrentBall.textContent = last < 10 ? '0' + last : last;
-            } else {
-                elCurrentBall.textContent = "--";
-            }
-
-            // Sincroniza listas
-            if (data.winners) updateWinners(data.winners);
-            if (data.near_wins) updateNearWins(data.near_wins);
-
-            // Sincroniza Configurações
-            if (data.maxBalls) config.maxBalls = data.maxBalls;
-            if (data.gridIndex) config.gridIndex = data.gridIndex;
-            if (data.numChances) config.numChances = data.numChances;
-
-            if (data.modes) {
-                availableModes = data.modes;
-                populateModesList();
-            }
-
-            updateConfigBadge();
-        });
-
-        bingoSocket.on('config_updated', (data) => {
-            config.maxBalls = data.maxBalls;
-            config.gridIndex = data.gridIndex;
-            config.numChances = data.numChances;
-            updateConfigBadge();
-
-            // Sincroniza campos se o administrador estiver com o modal aberto
-            syncSettingsFields();
         });
 
         bingoSocket.on('number_drawn', (data) => {
@@ -648,7 +600,7 @@
             historyToShow.forEach(num => {
                 const ball = document.createElement('div');
                 ball.className = 'ball animate-fade-in';
-                ball.textContent = num;
+                ball.textContent = num < 10 ? '0' + num : num;
                 elHistory.insertBefore(ball, elHistory.firstChild);
             });
 
@@ -659,6 +611,7 @@
                 elCurrentBall.textContent = "--";
             }
 
+            // Sincroniza listas
             if (data.winners) {
                 lastWinners = data.winners;
                 updateWinners(lastWinners);
@@ -668,9 +621,17 @@
                 updateNearWins(lastNearWins);
             }
 
+            // Sincroniza Configurações
+            if (data.maxBalls) config.maxBalls = data.maxBalls;
+            if (data.gridIndex) config.gridIndex = data.gridIndex;
+            if (data.numChances) config.numChances = data.numChances;
+
             if (document.getElementById('mode-display')) {
                 document.getElementById('mode-display').textContent = data.modeName || "Bingo";
             }
+
+            const elPlaying = document.getElementById('playing-count');
+            if (elPlaying) elPlaying.textContent = (data.totalRegistered || 0) + " CARTELAS EM JOGO";
         });
 
         bingoSocket.on('config_updated', (data) => {
@@ -814,6 +775,7 @@
 
         function populateModesList() {
             const select = document.getElementById('cfg-mode');
+            if (!select) return;
             select.innerHTML = "";
             availableModes.forEach(mode => {
                 const opt = document.createElement('option');
@@ -830,8 +792,6 @@
                 const modeName = mode ? mode.name : `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1}`;
                 badge.textContent = `${modeName} | ${config.numChances} Chance(s)`;
             }
-            // Atualiza o placeholder do manual input
-            elManualInput.max = config.maxBalls;
         }
     </script>
 </body>
