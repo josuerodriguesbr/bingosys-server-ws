@@ -56,6 +56,7 @@ private:
     QMap<int, GameInstance> m_gameInstances;
     BingoDatabaseManager *m_db;
     
+    QString m_masterToken;
     int m_historyLimit;
 };
 

@@ -200,7 +200,7 @@
 
         bingoSocket.on('login_success', (data) => {
             if (data.is_master) {
-                BingoAuth.saveSession("MESTRE", true, 0, true);
+                BingoAuth.saveSession(data.token, true, 0, true);
                 window.location.href = 'admin_tenants.html';
             } else {
                 BingoAuth.saveSession(inputChave.value.trim(), data.is_operator, data.sorteio_id, false);

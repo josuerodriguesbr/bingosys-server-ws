@@ -130,6 +130,23 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     
     if (action == "login") {
         QString chave = json["chave"].toString();
+        
+        // Verifica se é o Token Mestre atual
+        if (!m_masterToken.isEmpty() && chave == m_masterToken) {
+            ClientSession session;
+            session.sorteioId = 0;
+            session.isOperator = true;
+            m_sessions[client] = session;
+
+            QJsonObject response;
+            response["action"] = "login_response";
+            response["status"] = "ok";
+            response["is_master"] = true;
+            response["sorteio_id"] = 0;
+            sendJson(client, response);
+            return;
+        }
+
         QJsonObject res = m_db->validarChaveAcesso(chave);
         
         QJsonObject response;
@@ -175,10 +192,14 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             session.isOperator = true;
             m_sessions[client] = session;
 
+            // Gera um token de sessão mestre para persistência (refresh de página)
+            m_masterToken = "MASTER-" + QString::number(QRandomGenerator::global()->generate()).mid(0, 8);
+
             QJsonObject response;
             response["action"] = "login_response";
             response["status"] = "ok";
             response["is_master"] = true;
+            response["token"] = m_masterToken;
             sendJson(client, response);
         } else {
             QJsonObject response;
