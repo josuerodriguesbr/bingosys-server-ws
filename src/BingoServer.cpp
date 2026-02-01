@@ -197,6 +197,38 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             resp["action"] = "admin_data_response";
             resp["sorteios"] = m_db->listarTodosSorteios();
             resp["chaves"] = m_db->listarTodasChavesAcesso();
+            resp["modelos"] = m_db->listarModelos();
+            resp["bases"] = m_db->listarBases();
+            sendJson(client, resp);
+            return;
+        }
+
+        if (action == "criar_chave") {
+            int modeloId = json["modelo_id"].toInt();
+            int baseId = json["base_id"].toInt();
+            
+            // Gera uma chave aleatória se não enviada
+            QString chave = json["chave"].toString();
+            if (chave.isEmpty()) {
+                chave = "KEY-" + QString::number(QRandomGenerator::global()->bounded(10000, 99999)) + 
+                        "-" + QString::number(QRandomGenerator::global()->bounded(1000, 9999));
+            }
+
+            int sid = m_db->criarSorteioComChave(modeloId, baseId, chave);
+            
+            QJsonObject resp;
+            resp["action"] = "chave_criada_response";
+            if (sid != -1) {
+                resp["status"] = "ok";
+                resp["sorteio_id"] = sid;
+                resp["chave"] = chave;
+                // Envia lista atualizada
+                resp["sorteios"] = m_db->listarTodosSorteios();
+                resp["chaves"] = m_db->listarTodasChavesAcesso();
+            } else {
+                resp["status"] = "error";
+                resp["message"] = "Falha ao criar sorteio ou chave no banco de dados.";
+            }
             sendJson(client, resp);
             return;
         }

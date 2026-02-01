@@ -72,6 +72,9 @@ CREATE TABLE BOLAS_SORTEADAS (
     momento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inserção inicial de teste (Opcional)
+-- Inserção inicial de teste
 INSERT INTO MODELOS_SORTEIO (nome) VALUES ('Clássico 75');
+INSERT INTO MODELOS_SORTEIO (nome) VALUES ('75x15');
+
 INSERT INTO BASES_DADOS (nome, tipo_grade) VALUES ('Base Oficial 1M', '75x25');
+INSERT INTO BASES_DADOS (nome, tipo_grade) VALUES ('Base 75x15 - Teste', '75x15');

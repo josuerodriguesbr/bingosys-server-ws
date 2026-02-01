@@ -23,6 +23,9 @@ public:
     // Sorteios (Global/Admin)
     QJsonArray listarTodosSorteios();
     QJsonArray listarTodasChavesAcesso();
+    QJsonArray listarModelos();
+    QJsonArray listarBases();
+    int criarSorteioComChave(int modeloId, int baseId, const QString &chave);
 
     // Sorteios (Individuais)
     QJsonObject getSorteio(int sorteioId);

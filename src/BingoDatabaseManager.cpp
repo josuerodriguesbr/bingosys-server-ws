@@ -169,3 +169,61 @@ QJsonArray BingoDatabaseManager::listarTodasChavesAcesso()
     }
     return array;
 }
+
+QJsonArray BingoDatabaseManager::listarModelos()
+{
+    QJsonArray array;
+    QSqlQuery query("SELECT id, nome FROM MODELOS_SORTEIO ORDER BY id");
+    while (query.next()) {
+        QJsonObject obj;
+        obj["id"] = query.value("id").toInt();
+        obj["nome"] = query.value("nome").toString();
+        array.append(obj);
+    }
+    return array;
+}
+
+QJsonArray BingoDatabaseManager::listarBases()
+{
+    QJsonArray array;
+    QSqlQuery query("SELECT id, nome, tipo_grade FROM BASES_DADOS ORDER BY id");
+    while (query.next()) {
+        QJsonObject obj;
+        obj["id"] = query.value("id").toInt();
+        obj["nome"] = query.value("nome").toString();
+        obj["tipo"] = query.value("tipo_grade").toString();
+        array.append(obj);
+    }
+    return array;
+}
+
+int BingoDatabaseManager::criarSorteioComChave(int modeloId, int baseId, const QString &chave)
+{
+    if (!m_db.transaction()) return -1;
+
+    QSqlQuery qSorteio;
+    qSorteio.prepare("INSERT INTO SORTEIOS (modelo_id, base_id, status) VALUES (:mid, :bid, 'configurando') RETURNING id");
+    qSorteio.bindValue(":mid", modeloId);
+    qSorteio.bindValue(":bid", baseId);
+    
+    if (!qSorteio.exec() || !qSorteio.next()) {
+        m_db.rollback();
+        return -1;
+    }
+
+    int sorteioId = qSorteio.value(0).toInt();
+
+    QSqlQuery qChave;
+    qChave.prepare("INSERT INTO CHAVES_ACESSO (codigo_chave, sorteio_id, status) VALUES (:chave, :sid, 'ativa')");
+    qChave.bindValue(":chave", chave);
+    qChave.bindValue(":sid", sorteioId);
+
+    if (!qChave.exec()) {
+        m_db.rollback();
+        return -1;
+    }
+
+    if (!m_db.commit()) return -1;
+
+    return sorteioId;
+}

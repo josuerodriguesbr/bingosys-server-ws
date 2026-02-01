@@ -138,8 +138,26 @@
 
         bingoSocket.on('admin_data_response', (data) => {
             renderizarSorteios(data.sorteios);
-            // Renderizar chaves futuramente se necessário
+            popularModelosEBases(data.modelos, data.bases);
         });
+
+        bingoSocket.on('chave_criada_response', (data) => {
+            if (data.status === 'ok') {
+                alert(`Chave gerada com sucesso!\n\nSorteio #${data.sorteio_id}\nChave: ${data.chave}`);
+                fecharModalNovaChave();
+                renderizarSorteios(data.sorteios);
+            } else {
+                alert("Erro: " + data.message);
+            }
+        });
+
+        function popularModelosEBases(modelos, bases) {
+            const selModelo = document.getElementById('new-modelo');
+            const selBase = document.getElementById('new-base');
+
+            selModelo.innerHTML = modelos.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+            selBase.innerHTML = bases.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+        }
 
         function renderizarSorteios(sorteios) {
             elListaSorteios.innerHTML = "";
@@ -173,12 +191,28 @@
             });
         }
 
+        function fecharModalNovaChave() {
+            document.getElementById('modal-nova-chave').style.display = 'none';
+        }
+
+        function abrirModalNovaChave() {
+            document.getElementById('modal-nova-chave').style.display = 'flex';
+        }
+
+        function gerarNovaChaveFinal() {
+            const modeloId = parseInt(document.getElementById('new-modelo').value);
+            const baseId = parseInt(document.getElementById('new-base').value);
+
+            bingoSocket.send('criar_chave', {
+                modelo_id: modeloId,
+                base_id: baseId
+            });
+        }
+
         function gerarChave(sorteioId) {
-            const chave = 'KEY' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-            if (confirm(`Deseja gerar uma nova chave de acesso para o sorteio #${sorteioId}?\n\nChave sugerida: ${chave}`)) {
-                // bingoSocket.send('criar_chave', { sorteio_id: sorteioId, chave: chave });
-                alert("Ação de criar chave será implementada a seguir.");
-            }
+            // ... (mantido apenas para sorteios já existentes se necessário, 
+            // mas o foco agora é a criação automática)
+            alert("Para este sorteio, use as chaves já existentes ou gere uma nova via DB.");
         }
     </script>
 </body>
