@@ -76,5 +76,7 @@ CREATE TABLE BOLAS_SORTEADAS (
 INSERT INTO MODELOS_SORTEIO (nome) VALUES ('Clássico 75');
 INSERT INTO MODELOS_SORTEIO (nome) VALUES ('75x15');
 
-INSERT INTO BASES_DADOS (nome, tipo_grade) VALUES ('Base Oficial 1M', '75x25');
-INSERT INTO BASES_DADOS (nome, tipo_grade) VALUES ('Base 75x15 - Teste', '75x15');
+INSERT INTO MODELOS_SORTEIO (nome) VALUES ('75x15BINGO');
+
+INSERT INTO BASES_DADOS (nome, tipo_grade, caminho_dados) VALUES ('Base Oficial 1M', '75x25', 'data/base-cartelas.TXT');
+INSERT INTO BASES_DADOS (nome, tipo_grade, caminho_dados) VALUES ('Base 75x15 BINGO', '75x15', 'data/75x15BINGO.txt');

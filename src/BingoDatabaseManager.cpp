@@ -143,6 +143,11 @@ QJsonArray BingoDatabaseManager::listarTodosSorteios()
                     "LEFT JOIN BASES_DADOS b ON s.base_id = b.id "
                     "ORDER BY s.id DESC");
     
+    if (!query.isActive() && !query.exec()) {
+        qCritical() << "Erro ao listar sorteios:" << query.lastError().text();
+        return array;
+    }
+    
     while (query.next()) {
         QJsonObject obj;
         obj["id"] = query.value("id").toInt();
@@ -207,6 +212,7 @@ int BingoDatabaseManager::criarSorteioComChave(int modeloId, int baseId, const Q
     qSorteio.bindValue(":bid", baseId);
     
     if (!qSorteio.exec() || !qSorteio.next()) {
+        qCritical() << "Erro ao inserir sorteio:" << qSorteio.lastError().text();
         m_db.rollback();
         return -1;
     }
@@ -219,6 +225,7 @@ int BingoDatabaseManager::criarSorteioComChave(int modeloId, int baseId, const Q
     qChave.bindValue(":sid", sorteioId);
 
     if (!qChave.exec()) {
+        qCritical() << "Erro ao inserir chave:" << qChave.lastError().text();
         m_db.rollback();
         return -1;
     }
