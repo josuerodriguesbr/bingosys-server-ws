@@ -86,7 +86,6 @@ void BingoServer::onNewConnection()
     QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
 
     connect(pSocket, &QWebSocket::textMessageReceived, this, &BingoServer::processTextMessage);
-    connect(pSocket, &QWebSocket::binaryMessageReceived, this, &BingoServer::processBinaryMessage);
     connect(pSocket, &QWebSocket::disconnected, this, &BingoServer::socketDisconnected);
 
     m_clients << pSocket;

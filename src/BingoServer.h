@@ -30,7 +30,6 @@ public:
 private Q_SLOTS:
     void onNewConnection();
     void processTextMessage(QString message);
-    void processBinaryMessage(QByteArray message);
     void socketDisconnected();
 
 private:
