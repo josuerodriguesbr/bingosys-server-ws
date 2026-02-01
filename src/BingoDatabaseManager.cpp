@@ -8,6 +8,7 @@ BingoDatabaseManager::BingoDatabaseManager(QObject *parent) : QObject(parent)
 
 bool BingoDatabaseManager::connectToDatabase(const QString &host, const QString &dbName, const QString &user, const QString &pass)
 {
+    qInfo() << "Tentando conectar ao banco:" << host << "BD:" << dbName << "User:" << user << "Senha (size):" << pass.length();
     m_db = QSqlDatabase::addDatabase("QPSQL");
     m_db.setHostName(host);
     m_db.setDatabaseName(dbName);
