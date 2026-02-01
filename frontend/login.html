@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+        .login-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #ef4444;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">BINGOSYS</div>
+        <div class="input-group">
+            <label>Chave de Acesso do Sorteio</label>
+            <input type="text" id="access-key" placeholder="XXXX-XXXX" maxlength="20">
+        </div>
+        <button id="btn-login">ENTRAR NO SORTEIO</button>
+        <div id="error-msg" class="error-msg">Chave inválida ou sorteio encerrado.</div>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        const btnLogin = document.getElementById('btn-login');
+        const inputKey = document.getElementById('access-key');
+        const errMsg = document.getElementById('error-msg');
+
+        btnLogin.onclick = () => {
+            const key = inputKey.value.trim();
+            if(!key) return;
+            
+            btnLogin.disabled = true;
+            errMsg.style.display = 'none';
+            bingoSocket.login(key);
+        };
+
+        bingoSocket.on('login_success', (data) => {
+            BingoAuth.saveSession(inputKey.value.trim(), data.is_operator, data.sorteio_id);
+            if(data.is_operator) {
+                window.location.href = 'panel.html';
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        bingoSocket.on('login_error', (data) => {
+            btnLogin.disabled = false;
+            errMsg.innerText = data.message || "Erro ao entrar.";
+            errMsg.style.display = 'block';
+        });
+
+        // Enter key support
+        inputKey.onkeyup = (e) => {
+            if(e.key === 'Enter') btnLogin.onclick();
+        };
+    </script>
+</body>
+</html>

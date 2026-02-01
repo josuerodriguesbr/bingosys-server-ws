@@ -120,3 +120,16 @@ QJsonArray BingoDatabaseManager::getPremiacoes(int sorteioId)
     }
     return array;
 }
+
+QList<int> BingoDatabaseManager::getCartelasPorTelefone(int sorteioId, const QString &telefone)
+{
+    QList<int> cartelas;
+    QSqlQuery query;
+    query.prepare("SELECT numero_cartela FROM CARTELAS_VALIDADAS WHERE sorteio_id = :sid AND telefone_participante = :tel");
+    query.bindValue(":sid", sorteioId);
+    query.bindValue(":tel", telefone);
+    if (query.exec()) {
+        while (query.next()) cartelas.append(query.value(0).toInt());
+    }
+    return cartelas;
+}

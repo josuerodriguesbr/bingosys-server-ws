@@ -520,10 +520,50 @@
         </aside>
     </div>
 
+    <!-- Modal Identificação Telefone -->
+    <div id="modal-identification" class="modal-overlay" style="display: flex;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">Identificação do Participante</div>
+            </div>
+            <div class="form-group">
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Informe seu telefone para ver suas cartelas automaticamente durante o sorteio.
+                </p>
+                <label class="form-label">Telefone (com DDD)</label>
+                <input type="text" id="part-phone" class="form-input" placeholder="(00) 00000-0000">
+            </div>
+            <div class="modal-footer">
+                <button onclick="skipIdentification()" class="nav-btn">Pular</button>
+                <button onclick="saveIdentification()" class="nav-btn primary">Ver Minhas Cartelas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Meus Tickets (Exibição quando sorteado) -->
+    <div id="modal-my-tickets" class="modal-overlay">
+        <div class="modal-card" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">Minhas Cartelas</div>
+                <button onclick="closeMyTickets()" class="nav-btn"
+                    style="position: absolute; right: 2rem; top: 2rem;">✖</button>
+            </div>
+            <div id="my-tickets-container"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-height: 60vh; overflow-y: auto; padding: 1rem;">
+                <!-- Tickets filter by phone -->
+            </div>
+        </div>
+    </div>
+
     <!-- Modal preferences removed for public view -->
 
     <script src="js/socket.js"></script>
+    <script src="js/auth.js"></script>
     <script>
+        // Check access
+        if (!BingoAuth.checkAccess(false)) {
+            // Redirect happens in checkAccess
+        }
         // DOM Elements
         const elCurrentBall = document.getElementById('current-ball');
         const elHistory = document.getElementById('history-row');
@@ -632,6 +672,17 @@
 
             const elPlaying = document.getElementById('playing-count');
             if (elPlaying) elPlaying.textContent = (data.totalRegistered || 0) + " CARTELAS EM JOGO";
+
+            // Se ja temos telefone, solicita tickets
+            const phone = localStorage.getItem('bingo_phone');
+            if (phone) {
+                bingoSocket.send("get_my_tickets", { telefone: phone });
+                document.getElementById('modal-identification').style.display = 'none';
+            }
+        });
+
+        bingoSocket.on('my_tickets_response', (data) => {
+            renderMyTickets(data.tickets);
         });
 
         bingoSocket.on('config_updated', (data) => {
@@ -792,6 +843,56 @@
                 const modeName = mode ? mode.name : `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1}`;
                 badge.textContent = `${modeName} | ${config.numChances} Chance(s)`;
             }
+        }
+
+        // --- Identificação do Participante ---
+        function saveIdentification() {
+            const phone = document.getElementById('part-phone').value.trim();
+            if (!phone) return;
+            localStorage.setItem('bingo_phone', phone);
+            bingoSocket.send("get_my_tickets", { telefone: phone });
+            document.getElementById('modal-identification').style.display = 'none';
+        }
+
+        function skipIdentification() {
+            document.getElementById('modal-identification').style.display = 'none';
+        }
+
+        function renderMyTickets(tickets) {
+            const container = document.getElementById('my-tickets-container');
+            container.innerHTML = "";
+
+            if (tickets.length === 0) {
+                container.innerHTML = "<p style='grid-column: span 2; text-align: center; color: var(--text-secondary);'>Nenhuma cartela encontrada para este telefone.</p>";
+                return;
+            }
+
+            tickets.forEach(ticket => {
+                const div = document.createElement('div');
+                div.className = 'ticket-card';
+                div.innerHTML = `
+                    <div class="ticket-header">
+                        <span>#${ticket.barcode}</span>
+                    </div>
+                    ${renderBingoGrid(ticket.numbers)}
+                `;
+                container.appendChild(div);
+            });
+
+            // Adiciona botão para abrir essa visualização se houver tickets
+            if (tickets.length > 0 && !document.getElementById('btn-show-my')) {
+                const nav = document.querySelector('.nav-actions');
+                const btn = document.createElement('button');
+                btn.id = 'btn-show-my';
+                btn.className = 'nav-btn primary';
+                btn.innerHTML = '🎴 MINHAS CARTELAS';
+                btn.onclick = () => document.getElementById('modal-my-tickets').style.display = 'flex';
+                nav.appendChild(btn);
+            }
+        }
+
+        function closeMyTickets() {
+            document.getElementById('modal-my-tickets').style.display = 'none';
         }
     </script>
 </body>

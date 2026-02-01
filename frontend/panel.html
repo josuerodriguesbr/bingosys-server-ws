@@ -475,6 +475,7 @@
             <div id="mode-display" class="mode-badge">75 Bolas | 1 Chance</div>
             <a href="vendas.html" class="nav-btn">🛒 VENDAS</a>
             <button onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
+            <button onclick="logout()" class="nav-btn" style="color: var(--danger)">🚪 SAIR</button>
         </div>
     </nav>
 
@@ -574,7 +575,12 @@
     </div>
 
     <script src="js/socket.js"></script>
+    <script src="js/auth.js"></script>
     <script>
+        // Check access before doing anything
+        if (!BingoAuth.checkAccess(true)) {
+            // checkAccess handles redirect
+        }
         // DOM Elements
         const elCurrentBall = document.getElementById('current-ball');
         const elHistory = document.getElementById('history-row');
@@ -933,6 +939,13 @@
             }
             // Atualiza o placeholder do manual input
             elManualInput.max = config.maxBalls;
+        }
+        
+        // Botão de Sair
+        function logout() {
+            if(confirm("Deseja sair do painel?")) {
+                BingoAuth.logout();
+            }
         }
     </script>
 </body>

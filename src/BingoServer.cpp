@@ -241,6 +241,19 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             }
         }
     }
+    else if (action == "get_my_tickets") {
+        QString telefone = json["telefone"].toString();
+        QList<int> ids = m_db->getCartelasPorTelefone(session.sorteioId, telefone);
+        
+        QJsonObject resp;
+        resp["action"] = "my_tickets_response";
+        QJsonArray ticketsArr;
+        for (int id : ids) {
+            ticketsArr.append(getTicketDetailsJson(session.sorteioId, id));
+        }
+        resp["tickets"] = ticketsArr;
+        sendJson(client, resp);
+    }
 }
 
 void BingoServer::socketDisconnected()

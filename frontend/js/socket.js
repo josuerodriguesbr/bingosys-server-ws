@@ -59,9 +59,21 @@ class BingoSocket {
 
     handleMessage(data) {
         console.log('Server:', data);
+        if (data.action === 'login_response') {
+            if (data.status === 'ok') {
+                this.emit('login_success', data);
+            } else {
+                this.emit('login_error', data);
+            }
+        }
+        
         if (data.action) {
             this.emit(data.action, data);
         }
+    }
+
+    login(chave) {
+        this.send('login', { chave });
     }
 }
 
