@@ -26,12 +26,6 @@ public:
 
     bool start();
     void loadTickets(const QVector<BingoTicket> &tickets);
-    void setSalesPath(const QString &path);
-    void loadSales();
-    void saveSales();
-
-    void loadConfig();
-    void saveConfig();
 
 private Q_SLOTS:
     void onNewConnection();

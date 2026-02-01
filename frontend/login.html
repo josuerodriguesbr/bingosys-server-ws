@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,10 +14,11 @@
             height: 100vh;
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
         }
+
         .login-card {
             background: rgba(30, 41, 59, 0.7);
             backdrop-filter: blur(10px);
-            padding: 3rem;
+            padding: 2.5rem;
             border-radius: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
             width: 100%;
@@ -24,6 +26,38 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
         .logo {
             font-size: 2.5rem;
             font-weight: 800;
@@ -32,16 +66,19 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
         .input-group {
             margin-bottom: 1.5rem;
             text-align: left;
         }
+
         label {
             display: block;
             margin-bottom: 0.5rem;
             color: #94a3b8;
             font-size: 0.875rem;
         }
+
         input {
             width: 100%;
             padding: 1rem;
@@ -54,6 +91,7 @@
             letter-spacing: 2px;
             text-transform: uppercase;
         }
+
         button {
             width: 100%;
             padding: 1rem;
@@ -66,14 +104,17 @@
             transition: all 0.2s;
             font-size: 1rem;
         }
+
         button:hover {
             background: #2563eb;
             transform: translateY(-2px);
         }
+
         button:disabled {
             background: #475569;
             cursor: not-allowed;
         }
+
         .error-msg {
             color: #ef4444;
             margin-top: 1rem;
@@ -82,52 +123,106 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
         <div class="logo">BINGOSYS</div>
-        <div class="input-group">
-            <label>Chave de Acesso do Sorteio</label>
-            <input type="text" id="access-key" placeholder="XXXX-XXXX" maxlength="20">
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="alternarAba('chave')">PARTICIPANTE</button>
+            <button class="tab-btn" onclick="alternarAba('admin')">ADMIN</button>
         </div>
-        <button id="btn-login">ENTRAR NO SORTEIO</button>
+
+        <div id="secao-chave" class="form-section active">
+            <div class="input-group">
+                <label>Chave de Acesso do Sorteio</label>
+                <input type="text" id="access-key" placeholder="XXXX-XXXX" maxlength="20">
+            </div>
+            <button id="btn-login-key">ENTRAR NO SORTEIO</button>
+        </div>
+
+        <div id="secao-admin" class="form-section">
+            <div class="input-group">
+                <label>Usuário Mestre</label>
+                <input type="text" id="admin-user" placeholder="admin"
+                    style="text-transform: none; letter-spacing: normal;">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="admin-pass" placeholder="••••••••">
+            </div>
+            <button id="btn-login-admin" style="background: #6366f1;">ENTRAR COMO MESTRE</button>
+        </div>
+
         <div id="error-msg" class="error-msg">Chave inválida ou sorteio encerrado.</div>
     </div>
 
     <script src="js/socket.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        const btnLogin = document.getElementById('btn-login');
-        const inputKey = document.getElementById('access-key');
-        const errMsg = document.getElementById('error-msg');
+        const btnLoginChave = document.getElementById('btn-login-key');
+        const btnLoginAdmin = document.getElementById('btn-login-admin');
+        const inputChave = document.getElementById('access-key');
+        const inputUsuario = document.getElementById('admin-user');
+        const inputSenha = document.getElementById('admin-pass');
+        const msgErro = document.getElementById('error-msg');
 
-        btnLogin.onclick = () => {
-            const key = inputKey.value.trim();
-            if(!key) return;
-            
-            btnLogin.disabled = true;
-            errMsg.style.display = 'none';
-            bingoSocket.login(key);
+        function alternarAba(aba) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+
+            if (aba === 'chave') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('secao-chave').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('secao-admin').classList.add('active');
+            }
+            msgErro.style.display = 'none';
+        }
+
+        btnLoginChave.onclick = () => {
+            const chave = inputChave.value.trim();
+            if (!chave) return;
+            btnLoginChave.disabled = true;
+            msgErro.style.display = 'none';
+            bingoSocket.login(chave);
+        };
+
+        btnLoginAdmin.onclick = () => {
+            const usuario = inputUsuario.value.trim();
+            const senha = inputSenha.value;
+            if (!usuario || !senha) return;
+            btnLoginAdmin.disabled = true;
+            msgErro.style.display = 'none';
+            bingoSocket.send('login_admin', { usuario, senha });
         };
 
         bingoSocket.on('login_success', (data) => {
-            BingoAuth.saveSession(inputKey.value.trim(), data.is_operator, data.sorteio_id);
-            if(data.is_operator) {
-                window.location.href = 'panel.html';
+            if (data.is_master) {
+                BingoAuth.saveSession("MESTRE", true, 0, true);
+                window.location.href = 'admin_tenants.html';
             } else {
-                window.location.href = 'index.html';
+                BingoAuth.saveSession(inputChave.value.trim(), data.is_operator, data.sorteio_id, false);
+                if (data.is_operator) {
+                    window.location.href = 'panel.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         });
 
         bingoSocket.on('login_error', (data) => {
-            btnLogin.disabled = false;
-            errMsg.innerText = data.message || "Erro ao entrar.";
-            errMsg.style.display = 'block';
+            btnLoginChave.disabled = false;
+            btnLoginAdmin.disabled = false;
+            msgErro.innerText = data.message || "Erro ao entrar.";
+            msgErro.style.display = 'block';
         });
 
         // Enter key support
-        inputKey.onkeyup = (e) => {
-            if(e.key === 'Enter') btnLogin.onclick();
-        };
+        inputChave.onkeyup = (e) => { if (e.key === 'Enter') btnLoginChave.onclick(); };
+        inputSenha.onkeyup = (e) => { if (e.key === 'Enter') btnLoginAdmin.onclick(); };
     </script>
 </body>
+
 </html>

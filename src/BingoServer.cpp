@@ -91,41 +91,6 @@ void BingoServer::onNewConnection()
 
     m_clients << pSocket;
     qInfo() << "Novo cliente conectado:" << pSocket->peerAddress().toString();
-
-    // Envia estado inicial para sincronizacao
-    QJsonObject sync;
-    sync["action"] = "sync_status";
-    sync["totalRegistered"] = m_gameEngine.getRegisteredCount();
-    
-    QJsonArray drawnArray;
-    for(int n : m_gameEngine.getDrawnNumbers()) drawnArray.append(n);
-    sync["drawnNumbers"] = drawnArray;
-
-    QJsonArray winnersArray;
-    for(int w : m_gameEngine.getWinners()) {
-        winnersArray.append(getTicketDetailsJson(w));
-    }
-    sync["winners"] = winnersArray;
-
-    QJsonObject nearWinObj;
-    auto nearWins = m_gameEngine.getNearWinTickets();
-    for(auto it = nearWins.begin(); it != nearWins.end(); ++it) {
-        QJsonArray ticketInfos;
-        for(int id : it.value()) {
-            ticketInfos.append(getTicketDetailsJson(id));
-        }
-        nearWinObj[QString::number(it.key())] = ticketInfos;
-    }
-    sync["near_wins"] = nearWinObj;
-    
-    // Configurações atuais
-    sync["maxBalls"] = m_gameEngine.getMaxBalls();
-    sync["gridIndex"] = m_gameEngine.getGameMode();
-    sync["numChances"] = m_gameEngine.getNumChances();
-    sync["historyLimit"] = m_historyLimit;
-    sync["modes"] = m_modes; // Envia a lista de modos carregada
-
-    sendJson(pSocket, sync);
 }
 
 void BingoServer::processTextMessage(QString message)
@@ -197,6 +162,45 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         }
         sendJson(client, response);
         return;
+    }
+
+    if (action == "login_admin") {
+        QString usuario = json["usuario"].toString();
+        QString senha = json["senha"].toString();
+        
+        // LOGIN MESTRE HARDCODED (Conforme solicitado pelo usuário para primeiro acesso)
+        // Recomenda-se mudar ou mover para config futuramente
+        if (usuario == "admin" && senha == "Bingo2026!@#") {
+            ClientSession session;
+            session.sorteioId = 0; // 0 = Acesso Global
+            session.isOperator = true;
+            m_sessions[client] = session;
+
+            QJsonObject response;
+            response["action"] = "login_response";
+            response["status"] = "ok";
+            response["is_master"] = true;
+            sendJson(client, response);
+        } else {
+            QJsonObject response;
+            response["action"] = "login_response";
+            response["status"] = "error";
+            response["message"] = "Usuario ou senha mestre invalidos";
+            sendJson(client, response);
+        }
+        return;
+    }
+
+    // Ações administrativas globais (is_master)
+    if (m_sessions.contains(client) && m_sessions[client].sorteioId == 0) {
+        if (action == "get_admin_data") {
+            QJsonObject resp;
+            resp["action"] = "admin_data_response";
+            resp["sorteios"] = m_db->listarTodosSorteios();
+            resp["chaves"] = m_db->listarTodasChavesAcesso();
+            sendJson(client, resp);
+            return;
+        }
     }
 
     // Ações que exigem estar logado em um sorteio

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Administração Mestre</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th {
+            text-align: left;
+            color: #94a3b8;
+            padding: 1rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .btn-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h1 style="font-size: 1.8rem; font-weight: 800;">ADMINISTRAÇÃO MESTRE</h1>
+            <button onclick="BingoAuth.logout()" class="nav-btn" style="color: var(--danger)">SAIR</button>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 1.2rem; font-weight: 700;">TENANTS (ASSINANTES)</h2>
+                <button class="btn-action btn-primary">+ NOVO ASSINANTE</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>NOME</th>
+                        <th>CHAVE MESTRA</th>
+                        <th>STATUS</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-tenants">
+                    <!-- Injetado via JS -->
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 3rem;">Carregando dados do
+                            servidor...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">SORTEIOS ATIVOS</h2>
+            <div id="lista-sorteios"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                <!-- Cards de sorteios -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!BingoAuth.checkAccess() || !BingoAuth.getSession().isMaster) {
+            window.location.href = 'login.html';
+        }
+
+        const elListaSorteios = document.getElementById('lista-sorteios');
+
+        bingoSocket.on('connected', () => {
+            console.log("Conectado como Administrador. Solicitando dados...");
+            bingoSocket.send('get_admin_data');
+        });
+
+        bingoSocket.on('admin_data_response', (data) => {
+            renderizarSorteios(data.sorteios);
+            // Renderizar chaves futuramente se necessário
+        });
+
+        function renderizarSorteios(sorteios) {
+            elListaSorteios.innerHTML = "";
+            if (sorteios.length === 0) {
+                elListaSorteios.innerHTML = "<p style='color: #94a3b8; padding: 2rem;'>Nenhum sorteio cadastrado no momento.</p>";
+                return;
+            }
+
+            sorteios.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.margin = '0';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <span style="color: #3b82f6; font-weight: 800; font-size: 0.8rem;">#${s.id}</span>
+                            <h3 style="font-weight: 700; margin-top: 0.2rem;">${s.modelo}</h3>
+                            <p style="font-size: 0.75rem; color: #94a3b8;">Base: ${s.base}</p>
+                        </div>
+                        <span class="badge ${s.status === 'rodando' ? 'badge-active' : ''}">${s.status.toUpperCase()}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">
+                        Criado em: ${s.criado_em}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-action" style="flex: 1;">CONFIGURAR</button>
+                        <button class="btn-action" style="flex: 1; border-color: #3b82f6; color: #3b82f6;" onclick="gerarChave(${s.id})">GERAR CHAVE</button>
+                    </div>
+                `;
+                elListaSorteios.appendChild(card);
+            });
+        }
+
+        function gerarChave(sorteioId) {
+            const chave = 'KEY' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            if (confirm(`Deseja gerar uma nova chave de acesso para o sorteio #${sorteioId}?\n\nChave sugerida: ${chave}`)) {
+                // bingoSocket.send('criar_chave', { sorteio_id: sorteioId, chave: chave });
+                alert("Ação de criar chave será implementada a seguir.");
+            }
+        }
+    </script>
+</body>
+
+</html>

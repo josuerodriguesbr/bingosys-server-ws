@@ -133,3 +133,39 @@ QList<int> BingoDatabaseManager::getCartelasPorTelefone(int sorteioId, const QSt
     }
     return cartelas;
 }
+
+QJsonArray BingoDatabaseManager::listarTodosSorteios()
+{
+    QJsonArray array;
+    QSqlQuery query("SELECT s.*, m.nome as modelo_nome, b.nome as base_nome "
+                    "FROM SORTEIOS s "
+                    "LEFT JOIN MODELOS_SORTEIO m ON s.modelo_id = m.id "
+                    "LEFT JOIN BASES_DADOS b ON s.base_id = b.id "
+                    "ORDER BY s.id DESC");
+    
+    while (query.next()) {
+        QJsonObject obj;
+        obj["id"] = query.value("id").toInt();
+        obj["status"] = query.value("status").toString();
+        obj["modelo"] = query.value("modelo_nome").toString();
+        obj["base"] = query.value("base_nome").toString();
+        obj["criado_em"] = query.value("criado_em").toDateTime().toString("dd/MM/yyyy HH:mm");
+        array.append(obj);
+    }
+    return array;
+}
+
+QJsonArray BingoDatabaseManager::listarTodasChavesAcesso()
+{
+    QJsonArray array;
+    QSqlQuery query("SELECT * FROM CHAVES_ACESSO ORDER BY id DESC");
+    while (query.next()) {
+        QJsonObject obj;
+        obj["id"] = query.value("id").toInt();
+        obj["chave"] = query.value("codigo_chave").toString();
+        obj["status"] = query.value("status").toString();
+        obj["sorteio_id"] = query.value("sorteio_id").toInt();
+        array.append(obj);
+    }
+    return array;
+}

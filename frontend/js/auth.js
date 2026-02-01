@@ -1,15 +1,17 @@
 const BingoAuth = {
-    saveSession(chave, isOperator, sorteioId) {
+    saveSession(chave, isOperator, sorteioId, isMaster = false) {
         localStorage.setItem('bingo_chave', chave);
         localStorage.setItem('bingo_is_operator', isOperator);
         localStorage.setItem('bingo_sorteio_id', sorteioId);
+        localStorage.setItem('bingo_is_master', isMaster);
     },
 
     getSession() {
         return {
             chave: localStorage.getItem('bingo_chave'),
             isOperator: localStorage.getItem('bingo_is_operator') === 'true',
-            sorteioId: localStorage.getItem('bingo_sorteio_id')
+            sorteioId: localStorage.getItem('bingo_sorteio_id'),
+            isMaster: localStorage.getItem('bingo_is_master') === 'true'
         };
     },
 
