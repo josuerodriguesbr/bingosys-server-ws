@@ -9,6 +9,13 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include "BingoGameEngine.h"
+#include "BingoDatabaseManager.h"
+
+struct ClientSession {
+    int sorteioId;
+    QString accessKey;
+    bool isOperator; // Se acessou com a chave de gerenciamento
+};
 
 class BingoServer : public QObject
 {
@@ -33,20 +40,29 @@ private Q_SLOTS:
     void socketDisconnected();
 
 private:
+    struct GameInstance {
+        BingoGameEngine *engine;
+        int baseId;
+        int modeloId;
+    };
+
     void sendJson(QWebSocket *client, const QJsonObject &json);
-    void broadcastJson(const QJsonObject &json);
+    void broadcastToGame(int sorteioId, const QJsonObject &json);
     void handleJsonMessage(QWebSocket *client, const QJsonObject &json);
-    QJsonObject getTicketDetailsJson(int ticketId);
+    QJsonObject getTicketDetailsJson(int sorteioId, int ticketId);
+    
+    // Inicializa ou retorna um motor para um sorteio específico
+    BingoGameEngine* getEngine(int sorteioId);
 
     QWebSocketServer *m_pWebSocketServer;
     QList<QWebSocket *> m_clients;
+    QMap<QWebSocket *, ClientSession> m_sessions;
     quint16 m_port;
     
-    BingoGameEngine m_gameEngine;
-    QString m_salesPath;
-    QString m_configPath;
-    QJsonArray m_modes; // Lista de modos carregados do modes.json
-    QMap<int, QString> m_saleTimestamps; // Mapeia ID da cartela para o timestamp da venda
+    QVector<BingoTicket> m_masterTickets;
+    QMap<int, GameInstance> m_gameInstances;
+    BingoDatabaseManager *m_db;
+    
     int m_historyLimit;
 };
 

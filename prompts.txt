@@ -271,3 +271,287 @@ bolas com cartelas ja na lista de gganhadores, chegou um momento que a lista de 
   detalhes ão importantes por causa da economia de espaço na tela que  nos finalmente
    poderemos ajustar melhor.
 ========================================================================================
+
+
+=========================================================================================
+SOBRE SER MULTI-JOGOS
+=========================================================================================
+
+Agora vamos relembras  umas ideias do começo do projeto, como você sabe esse projeto vai
+ ser um modulo de outro sistema, existe
+um sistema que vai receber esse como modulo.
+Lá na plataforma que esse sistema vai ser usilizado, os clientes da plataforma
+ poderão comprar o acesso a esse sistemaou se não for 
+o acesso podem comprar o direito de fazer um sorteio, ainda não sei como vou fazer 
+com relação ao acesso pelos clientes lá da plataforma.
+Mas é certo que esse sistema de sorteio terá que ser capaz de ter váriasinstancias 
+de sorteios rodando ao mesmo tempoe independentes.
+Nesse caso, vamos ter que definir uma forma de vender sorteios para os clientes da plataforma.
+Uma coisa que teremos que ver é, como vamos acoplar esse sistema de sorteio à plataforma.
+Desde o início insisti em não utilizar banco de dados aqui, justamente para ver se facilitava 
+o acoplamento à plataforma onde esse módulo vai funcionar.
+Então tenho essa dúvida, o que você acha?
+Passamos a pensar como vamos fazer o acoplamento?
+Passamos a verificar o comportamento  multi-jogoso , ou ele já permite isso?
+Ou passamos a realmente implementar a utilização de banco de dados no lugar de arquivos json, como estamos fazendo?
+REalmente são muitoas questões , né!?
+========================================================================================
+Essa é uma excelente reflexão e chega no momento exato! O projeto cresceu e agora precisamos decidir o "esqueleto" que vai sustentar essa expansão para múltiplos clientes.
+
+Respondendo ponto a ponto o que eu acho:
+
+1. O sistema já permite Multi-Jogos?
+Não. No momento, o BingoServer é como uma rádio que toca apenas uma estação: todos os clientes que se conectam ouvem e controlam o mesmo sorteio. Para ser multi-jogos, precisamos transformar o servidor em um "Hotel de Sorteios", onde cada cliente entra no seu "quarto" (Sala/GameID) e não interfere no vizinho.
+
+2. Banco de Dados vs. Arquivos JSON
+Aqui está o ponto mais crítico:
+
+Arquivos (JSON/TXT): São ótimos para um jogo só. Mas se você tiver 100 clientes jogando ao mesmo tempo, gerenciar 100 arquivos de configuração e 100 arquivos de vendas via C++ vai se tornar um pesadelo de performance e organização.
+Banco de Dados (Minha Recomendação): Para multi-jogos, o Banco de Dados (como SQLite para começar ou PostgreSQL para algo maior) é muito superior. Ele permite que a gente pergunte: "Ei, me dê todas as vendas do jogo 456" de forma instantânea, sem a gente ter que abrir e ler arquivos manualmente.
+3. Como fazer o Acoplamento (Integração)
+Se esse sistema vai ser um módulo, o melhor caminho é:
+
+Plataforma Principal: Cuida de usuários, pagamentos e da "venda" do sorteio.
+Módulo de Bingo (Nosso C++): É o "motor" que executa o sorteio.
+A Conexão: Quando a plataforma vende um sorteio, ela avisa o Bingo: "Ei, crie uma instância para o Jogo ID 123".
+Meu Veredito e Sugestão de Próximos Passos:
+Eu acho que devemos implementar um Banco de Dados agora. Isso não vai dificultar o acoplamento; pelo contrário, vai torná-lo muito mais profissional. A plataforma principal e o bingo podem até compartilhar o mesmo banco, ou se comunicarem via API.
+
+O que você acha de seguirmos este plano?
+
+Mudar o C++ para usar SQLite: Ele é um "banco de arquivo única", super leve e não precisa de instalação (fácil de mover como o JSON).
+Criar o conceito de game_id: No site, o endereço seria algo como index.html?game=123. Assim, o site sabe que só deve baixar as bolas e ganhadores daquele jogo específico.
+Realmente são muitas questões, mas resolver a base do "Multi-Jogos" agora vai evitar que tenhamos que refazer tudo no futuro! O que acha?
+
+==============================================================================================
+Sim, vamos começar logo essa jornada!
+Mas vamos fazer o seguinte, o banco de dados do módulo vai ser um banco de dados separado do banco da plataforma, realmente quero que os modulos 
+da plataforma fiquem super independentes, vamos ver depois como vai ser o acoplamento entendera plataforma E
+esse módulo, possivelmente na plataforma um usuário que tenha créditos suficiente vaiclicar num botão e comprar um ou vários sorteios e 
+simplesmente veremos uma forma de enviar um comando para o modulo sorteios com alguma identificação
+do cliente e criar os sorteios que ele comprou, e teremos que ter uma forma de somente esse clienteque comprou
+ter acesso ao sorteio que ele comprou... Sabemos que isso é coisa para mais a frente.
+
+A primeira coisa que temos que fazer agora é instalar o postgres na VPS, se ainda não estiver lá instalado.
+Depois teremos que definir  a estrutura do banco de dados, vamos chamar esse banco de "sorteios-bingo".
+
+
+
+=========================================================================================
+SSOBRE A ESTRUTURA DO BANCO DE DADOS
+=========================================================================================
+Estou achando o nome da tablea estranho mas sei o significado, por enquando vamos deixar com esse memo
+TENANTS
+Nessa tabela tem que ter o período ou a quantidade de vezes que ele pode fazer o sorteio, 
+isso vai depender de quantos creditos ele pagou....
+Façamos aasim ... vamos acrescentar nessa tabela se é por quantidade ou por periodo e 
+terá os campos tipo que designa isso , terá o campo quantidade se for por quantidade e
+ terá o campo data de vencimento se for por periodo, aliás melhor colocar data do periodo
+  e data do final do periodo,  deu pra entender, por enquanto vamos ficar ajustando essa 
+  estrutura de dados
+
+=======================================================================================
+
+
+=========================================================================================
+MUDANÇA GERAL DE OBJETIVO DO PROJETO - AGORA VAI SER UM MÓDULO DE SORTEIO GERAL
+=========================================================================================
+Vou tentar lhe explicar o novo rumo do projeto.
+
+O objetivo do sistema é ser uma máquina de fazer sorteios de bingos, continua os aspecttos
+como de preferências e até vamos adicionar outros mais.
+
+Tenha em mente que ee sistema agora nem precisará mais da tabela clients que iriamos criar,
+como é um módulo isolado ele vai focar somente no sorteio do bingo, vaai ser um serviço
+online para fazer sorteios de bingos. Os clientes desse sistema virão de outras plataformas,
+os clientes coprarão acesso em outras plataformas para poder utilizar. 
+
+O fato de clientes comprar acesso de outras plataformas nos faz pensar, e como é que as 
+outras plataformas vão gerenciar as ccartelas vendidas e principalmente a base de combinações
+de números das cartelas, isso realmente é importante para prestarmos atenção. Mas vamos
+considerar nesse primeiro momento que as outras plataformas irão usar o gerador de cartelas
+que faz parte do mesmo grupo o GRUPO BINFOSYS.COM.BR, assim por enquando dará certo.
+Os dados das cartelas que etão no nosso gerador, serão os mesmo que o sistema vai utilizar
+de início. Mas é certo que precisaremos de uma maneira de importar base de dados de terceiros,
+por exemplo, caso um cliente já tenha suas cartelas e queira fazer o sorteio em nosso sistema
+utilizando a base de dados que usou para gerar suas cartelas, então teremos condições
+de importar essa base de dados externa.
+
+Se chama modo de sorteio geral porque é um sistema que pode fazer sorteio de qualquer
+tipo de bingo.
+
+Uma questão muito importante é a segurança de acesso ao módulo sorteios de geral.
+O acesso será por meio de um código de acesso que os clientes irão receber de seu fornecedor,
+de seu revendedor. O cliente recebe a chave e com ela entra seguramente no sistema de sorteio geral.
+Temos que acegurar que esse acesso seja exclusivo, com certeza deveremos ter 
+alguma tabela no banco de dados para auxiliar nisso. O cliente será avisado que não pode
+divulgar sua chave de acesso para terceiros.
+
+Vamos limitar cada chave de acesso para dá direito a somente um sorteio, eu acho que assim
+vai simplificar muito na estrutura do sistema. A cheve de acesso do cliente será bloqueada
+se for confirmado que o sorteio para essa chave já foi realizado, e claro temos que garantir
+que o sorteio realmente chegou até o final, para não termos problemas com clientes nos 
+procurando, reclamando que o sorteio não foi finalizado e a chave dele está bloqueada.
+
+Sobre a infra-estrutura do módulo sorteio geral.
+
+Back-end continua sendo um servidor websocket construido com C++ em At Creator. Acredito
+que isso já está bem encaminhado. Todo processamento do sistema será feito no back-end, 
+não queremos nada sendo processado no front-end do sistema. Como é um sistema de jogos
+não podemos arriscar que alguém acesse e faça trapaça atraves do front-end.
+
+Front-end será um simples site que irá receber o código de acesso do cliente e se logar
+no servidor WS, ele receberá as informações para gerenciar seu jogo, e é agora que 
+tenho que lhe INFORMAR com muita atenção, até aqui, quando mensionei  cliente, eu estava
+falando do Operador do sorteio. Esse operador vai ter condições de lá de dentro
+de seu painel específico enviar LINK DE CONVITE, ou melhor dizendo disponibilizar LINK
+DE CONVITE para os participantes que compraram cartelas  do sorteio.
+
+Você está percebendo o grande isolamento do sistema de sorteio de bingo geral, ele não
+vai tratar de outras coisas, como vendas de cartelas por exemplo, esse sistema é um 
+módulo isolado que só trata do sorteio do bingo, mas que pode oferecer a opção 
+que todos os envolvidos participem, Administrador do sorteios e as pessoas que compraram
+cartelas que serão utilizadas no sorteios atual. E é ness ponto que devemos focar,
+esse projeto é uma ferramenta de sorteio de bingo que pode ser utilizado em conjunto
+com outras plataformas. Então ele tem que ser flexivel em poder fazer praticamentee
+todo tipo de sorteios de bingos.
+
+Telas do front-end.
+
+Administrador do Sistema (Sou eu, que sou dono desse sistema!)
+- Tela de Login: Nessa tela eu posso logar no sistema.
+- Tela de Dashboard: Uma espécie de dashboard que disponibiliza os recursos para EU
+  gerenciar os sorteios de forma geral, essa tela irá mostrar os sorteios agendados,
+  os sorteios que estão em andamento, os sorteios que já foram finalizados, etc...
+- Tela de Administração de Chaves de Acesso: Nessa tela eu posso gerenciar as chaves de acesso.
+  Poderei criar chaves, liberar chaves, etc...
+- Tela de Ferramentas de Criação de Modelos de Sorteios: Nessa tela eu posso criar modelos de sorteios.
+  Quando um operador entra com uma chave de acesso, ele vai ter disponível opções, preferências,
+  para personalizar um sorteio, mas ele também poderá simplesmente escolher um modelo já pronto.
+- Tela de Formação de Base dee Dados: Nessa tela eu posso criar tabela contendo novas base de dados
+  para o sistema de sorteio. Por exemplo o sisstema já vai ter a tabela 75x25 em que as dezenas 
+  estão numa certa ordem, estão na ordem das letras da palavra BINGO, cada letra tem uma faixa
+  de dezenas de 15 números, mas quero ter a condição de criar outra tabela 75x25 com as
+  dezenas noutra ordem.
+- Com certeza terão outras telas para o Administrador (Eu)...
+
+Operador do Sorteio (É a pessoa que foi escolhida para gerenciar o sorteio, não necessáriamente 
+  é o dono do bingo, que eu poderia o considerá as vezes como Assinante do modulo).
+* Um Operadro não vai precisar fazer login com Usuário e Senha, Ele simplesmente acessa um 
+  LINK especídfico que foi informado na hora da compra da chave de acesso, digita a chave de 
+  acesso e pronto já está logado, por isso é importante não deixar terceiros ver essa chave.
+- Tela do Operador do Sorteio: Uma espécie de dashboard que disponibiliza os recursos para
+  gerenciar o sorteio.
+- Tela de definição do sorteio: Nessa tela o operador do sorteio irá definir as preferências
+  do sorteio, como o tipo de bingo, o tipo de cartela, o tipo de sorteio, etc...
+  E não podemos esquecer que o operador não tem acesso a outros sorteios, pois cada chave deacesso 
+  só vai dá acesso ao sorteio subjacente à essa chave, isso vai facilitar, simplificar muito 
+  a estrutura do nosso sistema.
+- Tela de Premiações: Nessa tela o operador vai inserir as premiações do sorteio. 
+  Por exemplo: O operador vai informar quantas quinas serão considerada no sorteio, por exemplo:
+  primeira quina: prêmio Tal, segunda quina: premio tal... MAS também teremos o recurso de 
+  premio por FORMAS, o operador vai ter disponivel para ele uma ferramenta que desenha FORMAS
+  na grade de combinações de números, cada FORMA tem seu respectivo prêmio. E podemos considerar 
+  a cartela cheia, também, uma FORMA, seria a forma com todos os numeros da grade marcados.
+  Este recurso é realmente um grande diferencial desse sistema de sorteio.
+  * É importante resaltar que numa quina ou numa forma, pode ocorrer mais de um ganhador.
+- Tela de validação de cartelas: Nessa tela o operador do sorteio irá validar as cartelas
+  que foram compradas para o sorteio. O operador poderá incluir manulamente atraves da leitura
+  de código de barras, poderá incluir um número específico por faixa diretamente, poderá
+  importar um arquivo CSV com os números das cartelas, etc...
+- Tela de sorteio: Nessa tela o operador do sorteio irá realizar o sorteio.
+- Tela de resultados: Nessa tela o operador do sorteio irá visualizar os resultados do sorteio.
+  O histórico do sorteio deve ser SALVO no banco de dados para posterior auditoria se necessário.
+
+Participantes do Sorteio (Clientes Finais)
+* Assim como os Operadores , os clientes finais acessam o LINK que receberam, por exemplo no 
+  grupo ZAP, no email, etc... Nesse LINK já tem um código que designa a qual sorteio 
+  ele vai se conectar, simples e direto.
+  ATENÇÃO: Agora vi que tem um grande FURO aqui, como é que o sistema vai saber, quais as
+           caartelas que pertence a esse cliente, você concorda comigo?
+           É viável que o cliente informe o telefone, email ou cpf, que utilizou na hora da compra
+           e assim lá na tabela de validadas, o sistema trás pra tela dele somente as cartelas
+           que se refere ao sorteio em quesstão e que tiverem alguma credencial dessee cliente.
+           Mas isso é complicado, como o operador vai informar esses dados do cliente, quando
+           ele for validar as cartelas utilizando codigo de barras. Na importação é até possível
+           que no arquivo de importação CSV contenha esse dado do cliente.... VAMOS TER ANALISARMO
+           JUNTOS COMO VAMOS RESOLVER ISSO, JÁ ESTOU IMAGINANDO QUE SÓ TEREMOS UMA FORMA DE 
+           VALIDAÇÃO, POR IMPORTAÇÃO MESMO, PARA PODERMOSS PEGAR OS DADOS DO CLIENTE.
+- Tela de Sorteio: Os clientes visualizam a ultima bola chamada, as 5 ou N últimas bolas chamadas.
+  E estou pensando num recurso legal, o cliente que pagar um valor extra, pode ter em sua Tela
+  um botão que ao clicar, vai executar o sorteio do próximo número, é algo que estou analisando...
+
+- Tela de Resultados do Cliente Final: Nessa tela o cliente irá visualizar suas cartelas marcadas
+  para ele conferir quantas bolas faltou para ganhar, pode conter também LINKS para ele participar
+  de próximos sorteios, etc...
+
+IMPORTANTE: Vamos considerar no momento somente validação de cartelas vendidas via arquivo de importação,
+            depois poderemos inserir a opção de validação manual pelo operador. E para testarmos por
+            enquanto vamos colocar um recurso onde eu como Adminisrador geral, possa validar
+            cartelas por faixa, por exemplo, o sistema me pede a quantidade de cartelas que Quero
+            inserir para teste,  por exemplo eu digito 200, então ele vai lá na base de dados e 
+            pega aleatoriamente 200 cartelas pra gente testar, esse recurso pode ser lá na tela
+            de validação, inclusive pode ser que esse recurso permaneça no sistem.
+
+Como eu, o Administrador geral vai acessar o sistema nesse momento de desenvolvimento? 
+Por enquanto vamos deixar amarrado mesmo lá no servidor WS crie um usuário e enha fixos.
+
+IMPORTANTE: Nos testes quero ser capaz de criar chaves de acesso, acessar o sistema com essa chave
+            e realizar sorteios de testes.
+
+IMPORTANTE: O sistema deve ser capaz de ao mesmo tempo está realizando vários sorteios independentes,
+            com seus operadores independentes gerenciando seu sorteio específico e com os clientes
+            finais observando seus sorteios específicos. E logicamente, Eu, o Administrador Geral
+            podendo ver tudo que está acontecendo no momento, em tempo real, e podendo interagir
+            com os operadores e os clientes finais.    
+
+Acho que já temos muita informaação sobre o sistema, e agora o que vamos fazer?
+
+* Lembre que ainda não vimos o banco de dados no servidor, acho que talves tenhamos ainda que 
+instalar o postgres na VPS.
+
+Agora você vai nalisar toda essa informação e criar um planejamento.
+
+Mas antes de começarmos a trabalhar no código ou lá na VPS instalando o postgres, eu quero 
+primeiro que nós definamoss a etrutura do banco de dados. Eu tenho que ver a estrutura visualmente
+para ter uma noção geral do sistema e que não ficou faltando nada.
+
+Eu acho que agora eu lhe arranjei um bom trabalho, você não acha? :-)
+
+================================================================================
+
+Aceito o desafio! 🚀 O "Módulo de Sorteio Geral" é uma visão muito mais potente e profissional para o BingoSys. Ele deixa de ser apenas um sistema de sorteio e vira uma plataforma de serviço (SaaS) completa.
+
+O que eu fiz:
+
+Redesenhei o Plano: Já atualizei o implementation_plan.md com a nova arquitetura de Chaves de Acesso, os três níveis de usuários (Admin, Operador e Participante) e o sistema de prêmios por Formas/Padrões.
+Esquema do Banco (PostgreSQL): Traduzi e adaptei as tabelas para suportar esse isolamento. Cada chave agora é um "ingresso" único para um sorteio específico.
+Pontos importantes para sua análise:
+
+Identificação do Participante: Como você mencionou, temos um "furo" sobre como o cliente final verá apenas suas cartelas. Sugiro que, na importação do CSV das vendas, o operador inclua o Telefone ou CPF do comprador. Quando o cliente acessar o link do sorteio, ele digita esse dado e o sistema filtra as cartelas dele na hora. O que acha?
+Prêmio por Formas: Isso vai ser o grande diferencial! Vou criar uma ferramenta onde o operador "desenha" o padrão (ex: um 'L', um 'X' ou um retângulo) na grade e o sistema valida isso automaticamente.
+Base de Dados Externa: Preparei o banco para aceitar dezenas vindas de outros geradores, facilitando a migração de clientes antigos seus.
+Por favor, dê uma olhada no novo diagrama no implementation_plan.md. Se a estrutura das tabelas estiver correta para você, o próximo passo será a instalação do PostgreSQL na VPS para começarmos a criar esse novo coração do sistema
+
+================================================================================
+
+Identificação do Participante: Como você mencionou, temos um "furo" sobre como o 
+cliente final verá apenas suas cartelas. Sugiro que, na importação do CSV das vendas, 
+o operador inclua o Telefone ou CPF do comprador. Quando o cliente acessar o link do 
+sorteio, ele digita esse dado e o sistema filtra as cartelas dele na hora. O que acha?
+Isso não é viável porque são milhares de carelas vendidas e o operador não vai ter
+ como inserir os dados dos participantes nõ.
+Vamos fazer assim, considere  ou seja já faça considerando isso, que o arquivo CSV de
+ importação já vai trazer  o dado exclusivo do participante, vamos considerar que vai 
+ ser o telefone do participante e vamos utilizar a chave dupla,  chave  acesso sorteio 
+ e telefone do participante  para o sistema poder mostrar somente as cartelas na tela 
+ do participante na hora do sorteio. 
+ E é lógico, vamos considerar que o participante vai receber junto com o link de acesso,
+ a chave de acesso correta ou algo que designe o sorteio correto que ele deve acessar.
+ Eu creio que ao comprar a cartela de bingo, o participante já vai receber lá do sistema 
+ de venda, que não tem ligação com esse nosso sistema de sorteio, não a chave de acesso,
+ mas uma sub chave que embaralhada que vai dá a ele acesso, pela tela do participante,
+ ao sorteio corrreto
+ O que você acha?
+
+

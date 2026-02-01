@@ -1,0 +1,77 @@
+-- Estrutura Oficial BingoSys - Módulo de Sorteio Geral
+
+-- Limpeza de tabelas antigas (se existirem)
+DROP TABLE IF EXISTS winners CASCADE;
+DROP TABLE IF EXISTS prizes CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS games CASCADE;
+DROP TABLE IF EXISTS tenants CASCADE;
+
+-- Novas Tabelas em Português
+DROP TABLE IF EXISTS BOLAS_SORTEADAS CASCADE;
+DROP TABLE IF EXISTS PREMIACOES CASCADE;
+DROP TABLE IF EXISTS CARTELAS_VALIDADAS CASCADE;
+DROP TABLE IF EXISTS SORTEIOS CASCADE;
+DROP TABLE IF EXISTS CHAVES_ACESSO CASCADE;
+DROP TABLE IF EXISTS MODELOS_SORTEIO CASCADE;
+DROP TABLE IF EXISTS BASES_DADOS CASCADE;
+
+CREATE TABLE MODELOS_SORTEIO (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    config_padrao JSONB
+);
+
+CREATE TABLE BASES_DADOS (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    tipo_grade VARCHAR(50) NOT NULL, -- Ex: 75x15, 75x25
+    caminho_dados VARCHAR(255)
+);
+
+CREATE TABLE SORTEIOS (
+    id SERIAL PRIMARY KEY,
+    status VARCHAR(50) DEFAULT 'configurando', -- configurando/rodando/finalizado
+    modelo_id INTEGER REFERENCES MODELOS_SORTEIO(id),
+    base_id INTEGER REFERENCES BASES_DADOS(id),
+    preferencias JSONB,
+    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    finalizado_em TIMESTAMPTZ
+);
+
+CREATE TABLE CHAVES_ACESSO (
+    id SERIAL PRIMARY KEY,
+    codigo_chave VARCHAR(100) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'ativa', -- ativa/bloqueada/usada
+    sorteio_id INTEGER REFERENCES SORTEIOS(id),
+    criado_em TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    usado_em TIMESTAMPTZ
+);
+
+CREATE TABLE CARTELAS_VALIDADAS (
+    id SERIAL PRIMARY KEY,
+    sorteio_id INTEGER REFERENCES SORTEIOS(id),
+    numero_cartela INTEGER NOT NULL,
+    telefone_participante VARCHAR(20),
+    origem VARCHAR(50) -- CSV/Manual/Faixa
+);
+
+CREATE TABLE PREMIACOES (
+    id SERIAL PRIMARY KEY,
+    sorteio_id INTEGER REFERENCES SORTEIOS(id),
+    nome_premio VARCHAR(255) NOT NULL,
+    tipo VARCHAR(50), -- quina/forma/cheia
+    padrao_grade JSONB,
+    ordem_exibicao INTEGER
+);
+
+CREATE TABLE BOLAS_SORTEADAS (
+    id SERIAL PRIMARY KEY,
+    sorteio_id INTEGER REFERENCES SORTEIOS(id),
+    numero INTEGER NOT NULL,
+    momento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Inserção inicial de teste (Opcional)
+INSERT INTO MODELOS_SORTEIO (nome) VALUES ('Clássico 75');
+INSERT INTO BASES_DADOS (nome, tipo_grade) VALUES ('Base Oficial 1M', '75x25');

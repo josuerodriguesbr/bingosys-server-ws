@@ -1,4 +1,4 @@
-QT += core network websockets
+QT += core network websockets sql
 
 QT -= gui
 
@@ -12,12 +12,14 @@ SOURCES += \
         src/main.cpp \
         src/BingoServer.cpp \
         src/BingoTicketParser.cpp \
-        src/BingoGameEngine.cpp
+        src/BingoGameEngine.cpp \
+        src/BingoDatabaseManager.cpp
 
 HEADERS += \
         src/BingoServer.h \
         src/BingoTicketParser.h \
-        src/BingoGameEngine.h
+        src/BingoGameEngine.h \
+        src/BingoDatabaseManager.h
 
 # Define output directories
 DESTDIR = bin
