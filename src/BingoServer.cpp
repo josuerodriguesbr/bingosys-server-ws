@@ -18,7 +18,7 @@ BingoServer::BingoServer(quint16 port, QObject *parent) :
     m_historyLimit(10)
 {
     // Conecta ao banco na inicialização (valores fixos conforme ambiente do usuário)
-    if (m_db->connectToDatabase("localhost", "sorteios-bingo", "postgres", "")) {
+    if (m_db->connectToDatabase("localhost", "sorteios-bingo", "postgres", "Bingo2026!@#")) {
         qInfo() << "BingoServer: Inicializado com PostgreSQL.";
     }
 }
