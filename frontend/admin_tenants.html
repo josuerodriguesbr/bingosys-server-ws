@@ -97,13 +97,13 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>NOME</th>
-                        <th>CHAVE MESTRA</th>
+                        <th>CÓDIGO DA CHAVE</th>
+                        <th>SORTEIO VINCULADO</th>
                         <th>STATUS</th>
                         <th>AÇÕES</th>
                     </tr>
                 </thead>
-                <tbody id="lista-tenants">
+                <tbody id="lista-chaves">
                     <!-- Injetado via JS -->
                     <tr>
                         <td colspan="5" style="text-align: center; color: #94a3b8; padding: 3rem;">Carregando dados do
@@ -172,14 +172,18 @@
 
         bingoSocket.on('admin_data_response', (data) => {
             renderizarSorteios(data.sorteios);
+            renderizarChaves(data.chaves);
             popularModelosEBases(data.modelos, data.bases);
         });
 
         bingoSocket.on('chave_criada_response', (data) => {
             if (data.status === 'ok') {
-                alert(`Chave gerada com sucesso!\n\nSorteio #${data.sorteio_id}\nChave: ${data.chave}`);
                 fecharModalNovaChave();
                 renderizarSorteios(data.sorteios);
+                renderizarChaves(data.chaves);
+
+                // Opcional: feedback visual sutil ao invés de alert travando
+                console.log("Sorteio e Chave criados:", data.chave);
             } else {
                 alert("Erro: " + data.message);
             }
@@ -191,6 +195,38 @@
 
             selModelo.innerHTML = modelos.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
             selBase.innerHTML = bases.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+        }
+
+        function renderizarChaves(chaves) {
+            const tbody = document.getElementById('lista-chaves');
+            tbody.innerHTML = "";
+
+            if (chaves.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma chave gerada.</td></tr>`;
+                return;
+            }
+
+            chaves.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span style="color: #3b82f6; font-weight: 700;">#${c.id}</span></td>
+                    <td><code style="background: #0f172a; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #334155;">${c.chave}</code></td>
+                    <td>Sorteio #${c.sorteio_id}</td>
+                    <td><span class="badge ${c.status === 'ativa' ? 'badge-active' : ''}">${c.status.toUpperCase()}</span></td>
+                    <td>
+                        <button class="btn-action" style="border-color: #3b82f6; color: #3b82f6;" onclick="copiarTexto('${c.chave}')">COPIAR</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copiarTexto(texto) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert("Chave copiada para a área de transferência!");
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+            });
         }
 
         function renderizarSorteios(sorteios) {
