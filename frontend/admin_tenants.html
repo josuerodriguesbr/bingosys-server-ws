@@ -78,6 +78,95 @@
             padding: 0.75rem 1.5rem;
             font-weight: 700;
         }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.3rem !important;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            /* Transformar Tabela em Cards no Mobile */
+            .table-container {
+                margin-top: 1rem;
+            }
+
+            table,
+            thead,
+            tbody,
+            th,
+            td,
+            tr {
+                display: block;
+            }
+
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            tr {
+                margin-bottom: 1rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.5rem;
+                background: rgba(0, 0, 0, 0.2);
+                padding: 0.5rem;
+            }
+
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50% !important;
+                text-align: right !important;
+                min-height: 2.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            td:last-child {
+                border-bottom: none;
+            }
+
+            td:before {
+                position: absolute;
+                left: 1rem;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 700;
+                color: #94a3b8;
+                content: attr(data-label);
+            }
+
+            /* Grid de Sorteios */
+            #lista-sorteios {
+                grid-template-columns: 1fr !important;
+            }
+
+            .btn-action {
+                width: 100%;
+                margin-top: 0.5rem;
+                padding: 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            .btn-primary {
+                width: 100%;
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 
@@ -94,24 +183,27 @@
                 <button class="btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer;"
                     onclick="criarChaveImediata()">+ Nova Chave</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>CÓDIGO DA CHAVE</th>
-                        <th>SORTEIO VINCULADO</th>
-                        <th>STATUS</th>
-                        <th>AÇÕES</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-chaves">
-                    <!-- Injetado via JS -->
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 3rem;">Carregando dados do
-                            servidor...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>CÓDIGO DA CHAVE</th>
+                            <th>SORTEIO VINCULADO</th>
+                            <th>STATUS</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-chaves">
+                        <!-- Injetado via JS -->
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 3rem;">Carregando dados
+                                do
+                                servidor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card">
@@ -119,6 +211,55 @@
             <div id="lista-sorteios"
                 style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
                 <!-- Cards de sorteios -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração -->
+    <div id="modal-config" class="modal-overlay"
+        style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(5px);">
+        <div class="card" style="width: 100%; max-width: 500px; padding: 2rem;">
+            <h2 id="config-title" style="margin-bottom: 1.5rem;">Configurar Sorteio #--</h2>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">Modelo
+                    (Template)</label>
+                <select id="cfg-modelo"
+                    style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.1);"
+                    onchange="aplicarModelo(this.value)">
+                    <!-- Preenchido via JS -->
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">Base de
+                    Dados</label>
+                <select id="cfg-base"
+                    style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.1);">
+                    <!-- Preenchido via JS -->
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">Limite de
+                    Histórico</label>
+                <input type="number" id="cfg-history" value="10"
+                    style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.1);">
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem;">Chances por
+                    Bip</label>
+                <input type="number" id="cfg-chances" value="1"
+                    style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: #0f172a; color: white; border: 1px solid rgba(255,255,255,0.1);">
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-action" style="flex: 1;" onclick="fecharConfig()">Cancelar</button>
+                <button class="btn-action" style="flex: 1; border-color: #f59e0b; color: #f59e0b;"
+                    onclick="salvarComoModelo()">Salvar como Modelo</button>
+                <button class="btn-primary" style="flex: 1; padding: 0.5rem;"
+                    onclick="salvarConfiguracao()">Salvar</button>
             </div>
         </div>
     </div>
@@ -134,8 +275,20 @@
         const elListaSorteios = document.getElementById('lista-sorteios');
 
         bingoSocket.on('connected', () => {
-            console.log("Conectado como Administrador. Solicitando dados...");
-            bingoSocket.send('get_admin_data');
+            console.log("Conectado ao servidor. Identificando sessão...");
+            const session = BingoAuth.getSession();
+            if (session.isMaster && session.chave) {
+                bingoSocket.send('login', { chave: session.chave });
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        bingoSocket.on('login_success', (data) => {
+            if (data.is_master) {
+                console.log("Autenticação mestre confirmada. Solicitando dados...");
+                bingoSocket.send('get_admin_data');
+            }
         });
 
         bingoSocket.on('admin_data_response', (data) => {
@@ -155,46 +308,6 @@
                 alert("Erro: " + data.message);
             }
         });
-
-        function popularModelosEBases(modelos, bases) {
-            const selModelo = document.getElementById('new-modelo');
-            const selBase = document.getElementById('new-base');
-
-            selModelo.innerHTML = modelos.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-            selBase.innerHTML = bases.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
-        }
-
-        function renderizarChaves(chaves) {
-            const tbody = document.getElementById('lista-chaves');
-            tbody.innerHTML = "";
-
-            if (chaves.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma chave gerada.</td></tr>`;
-                return;
-            }
-
-            chaves.forEach(c => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><span style="color: #3b82f6; font-weight: 700;">#${c.id}</span></td>
-                    <td><code style="background: #0f172a; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #334155;">${c.chave}</code></td>
-                    <td>Sorteio #${c.sorteio_id}</td>
-                    <td><span class="badge ${c.status === 'ativa' ? 'badge-active' : ''}">${c.status.toUpperCase()}</span></td>
-                    <td>
-                        <button class="btn-action" style="border-color: #3b82f6; color: #3b82f6;" onclick="copiarTexto('${c.chave}')">COPIAR</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function copiarTexto(texto) {
-            navigator.clipboard.writeText(texto).then(() => {
-                alert("Chave copiada para a área de transferência!");
-            }).catch(err => {
-                console.error('Erro ao copiar:', err);
-            });
-        }
 
         function renderizarSorteios(sorteios) {
             elListaSorteios.innerHTML = "";
@@ -220,7 +333,7 @@
                         Criado em: ${s.criado_em}
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn-action" style="flex: 1;">CONFIGURAR</button>
+                        <button class="btn-action" style="flex: 1;" onclick="abrirConfiguracao(${s.id})">CONFIGURAR</button>
                         <button class="btn-action" style="flex: 1; border-color: #3b82f6; color: #3b82f6;" onclick="gerarChave(${s.id})">GERAR CHAVE</button>
                     </div>
                 `;
@@ -229,15 +342,111 @@
         }
 
         function criarChaveImediata() {
-            // Cria com modelo padrão (ID 1) e base padrão (ID 1)
             bingoSocket.send('criar_chave', {
                 modelo_id: 1,
                 base_id: 1
             });
         }
 
-        function gerarChave(sorteioId) {
-            alert("Sorteio vinculado: #" + sorteioId);
+        function popularModelosEBases(modelos, bases) {
+            modelosCache = modelos;
+            basesCache = bases;
+
+            const selMod = document.getElementById('cfg-modelo');
+            const selBase = document.getElementById('cfg-base');
+
+            if (selMod) selMod.innerHTML = modelos.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+            if (selBase) selBase.innerHTML = bases.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+        }
+
+        function renderizarChaves(chaves) {
+            const tbody = document.getElementById('lista-chaves');
+            tbody.innerHTML = "";
+
+            if (chaves.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">Nenhuma chave gerada.</td></tr>`;
+                return;
+            }
+
+            chaves.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="ID"><span style="color: #3b82f6; font-weight: 700;">#${c.id}</span></td>
+                    <td data-label="CHAVE"><code style="background: #0f172a; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #334155;">${c.chave}</code></td>
+                    <td data-label="SORTEIO">Sorteio #${c.sorteio_id}</td>
+                    <td data-label="STATUS"><span class="badge ${c.status === 'ativa' ? 'badge-active' : ''}">${c.status.toUpperCase()}</span></td>
+                    <td data-label="AÇÕES">
+                        <button class="btn-action" style="border-color: #3b82f6; color: #3b82f6;" onclick="copiarTexto('${c.chave}')">COPIAR</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copiarTexto(texto) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert("Chave copiada para a área de transferência!");
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+            });
+        }
+
+        function abrirConfiguracao(sid) {
+            sorteioConfigurando = sid;
+            document.getElementById('config-title').textContent = "Configurar Sorteio #" + sid;
+            document.getElementById('modal-config').style.display = 'flex';
+            bingoSocket.send('get_draw_config', { sorteio_id: sid });
+        }
+
+        bingoSocket.on('draw_config_response', (data) => {
+            const d = data.draw;
+            document.getElementById('cfg-modelo').value = d.modelo_id;
+            document.getElementById('cfg-base').value = d.base_id;
+
+            const p = d.preferencias || {};
+            document.getElementById('cfg-history').value = p.historyLimit || 10;
+            document.getElementById('cfg-chances').value = p.numChances || 1;
+        });
+
+        function fecharConfig() {
+            document.getElementById('modal-config').style.display = 'none';
+        }
+
+        function aplicarModelo(id) {
+            const m = modelosCache.find(mod => mod.id == id);
+            if (m && m.config) {
+                document.getElementById('cfg-history').value = m.config.historyLimit || 10;
+                document.getElementById('cfg-chances').value = m.config.numChances || 1;
+            }
+        }
+
+        function salvarConfiguracao() {
+            const data = {
+                sorteio_id: sorteioConfigurando,
+                modelo_id: parseInt(document.getElementById('cfg-modelo').value),
+                base_id: parseInt(document.getElementById('cfg-base').value),
+                preferencias: {
+                    historyLimit: parseInt(document.getElementById('cfg-history').value),
+                    numChances: parseInt(document.getElementById('cfg-chances').value)
+                }
+            };
+            bingoSocket.send('update_config', data);
+            fecharConfig();
+            bingoSocket.send('get_admin_data'); // Atualiza lista
+        }
+
+        function salvarComoModelo() {
+            const nome = prompt("Digite o nome deste novo modelo:");
+            if (!nome) return;
+
+            const config = {
+                historyLimit: parseInt(document.getElementById('cfg-history').value),
+                numChances: parseInt(document.getElementById('cfg-chances').value)
+            };
+
+            bingoSocket.send('save_as_template', { nome, config });
+            alert("Modelo salvo com sucesso!");
+            bingoSocket.send('get_admin_data'); // Recarrega modelos
         }
     </script>
 </body>

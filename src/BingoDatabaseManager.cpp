@@ -1,6 +1,7 @@
 #include "BingoDatabaseManager.h"
 #include <QDebug>
 #include <QDateTime>
+#include <QJsonDocument>
 
 BingoDatabaseManager::BingoDatabaseManager(QObject *parent) : QObject(parent)
 {
@@ -47,15 +48,41 @@ QJsonObject BingoDatabaseManager::validarChaveAcesso(const QString &chave)
 QJsonObject BingoDatabaseManager::getSorteio(int sorteioId)
 {
     QSqlQuery query;
-    query.prepare("SELECT * FROM SORTEIOS WHERE id = :id");
+    query.prepare("SELECT s.*, b.tipo_grade, b.caminho_dados, m.nome as modelo_nome "
+                  "FROM SORTEIOS s "
+                  "JOIN BASES_DADOS b ON b.id = s.base_id "
+                  "JOIN MODELOS_SORTEIO m ON m.id = s.modelo_id "
+                  "WHERE s.id = :id");
     query.bindValue(":id", sorteioId);
 
-    if (!query.exec() || !query.next()) return QJsonObject();
+    if (!query.exec()) {
+        qWarning() << "getSorteio: Query falhou:" << query.lastError().text();
+        return QJsonObject();
+    }
+    if (!query.next()) {
+        qWarning() << "getSorteio: Nenhum resultado para sorteio:" << sorteioId;
+        return QJsonObject();
+    }
+
+    QString tipoGrade = query.value("tipo_grade").toString();
+    QString caminhoDados = query.value("caminho_dados").toString();
+    qInfo() << "getSorteio:" << sorteioId << "tipo_grade=" << tipoGrade << "caminho=" << caminhoDados;
 
     QJsonObject obj;
+    obj["id"] = query.value("id").toInt();
     obj["status"] = query.value("status").toString();
     obj["modelo_id"] = query.value("modelo_id").toInt();
     obj["base_id"] = query.value("base_id").toInt();
+    obj["tipo_grade"] = tipoGrade;
+    obj["caminho_dados"] = caminhoDados;
+    obj["modelo_nome"] = query.value("modelo_nome").toString();
+    
+    QString prefsStr = query.value("preferencias").toString();
+    if (!prefsStr.isEmpty()) {
+        QJsonDocument doc = QJsonDocument::fromJson(prefsStr.toUtf8());
+        obj["preferencias"] = doc.object();
+    }
+    
     return obj;
 }
 
@@ -89,7 +116,11 @@ bool BingoDatabaseManager::registrarVenda(int sorteioId, int numeroCartela, cons
     query.bindValue(":num", numeroCartela);
     query.bindValue(":tel", telefone.isEmpty() ? QVariant(QVariant::String) : telefone);
     query.bindValue(":ori", origem);
-    return query.exec();
+    if (!query.exec()) {
+        qCritical() << "Erro ao registrar venda:" << query.lastError().text();
+        return false;
+    }
+    return true;
 }
 
 QList<int> BingoDatabaseManager::getCartelasValidadas(int sorteioId)
@@ -108,18 +139,48 @@ QJsonArray BingoDatabaseManager::getPremiacoes(int sorteioId)
 {
     QJsonArray array;
     QSqlQuery query;
-    query.prepare("SELECT * FROM PREMIACOES WHERE sorteio_id = :sid ORDER BY ordem_exibicao ASC");
+    query.prepare("SELECT * FROM PREMIACOES WHERE sorteio_id = :sid ORDER BY ordem_exibicao ASC, id ASC");
     query.bindValue(":sid", sorteioId);
     if (query.exec()) {
         while (query.next()) {
             QJsonObject obj;
+            obj["id"] = query.value("id").toInt();
             obj["nome"] = query.value("nome_premio").toString();
             obj["tipo"] = query.value("tipo").toString();
-            // JSONB padrao_grade pode ser extraído como QJsonDocument
+            
+            QString padraoStr = query.value("padrao_grade").toString();
+            if (!padraoStr.isEmpty()) {
+                QJsonDocument doc = QJsonDocument::fromJson(padraoStr.toUtf8());
+                obj["padrao"] = doc.array();
+            }
             array.append(obj);
         }
     }
     return array;
+}
+
+bool BingoDatabaseManager::addPremiacao(int sorteioId, const QString &nome, const QString &tipo, const QJsonArray &padrao, int ordem)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO PREMIACOES (sorteio_id, nome_premio, tipo, padrao_grade, ordem_exibicao) "
+                  "VALUES (:sid, :nome, :tipo, :padrao, :ordem)");
+    query.bindValue(":sid", sorteioId);
+    query.bindValue(":nome", nome);
+    query.bindValue(":tipo", tipo);
+    
+    QJsonDocument doc(padrao);
+    query.bindValue(":padrao", QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+    query.bindValue(":ordem", ordem);
+    
+    return query.exec();
+}
+
+bool BingoDatabaseManager::removerPremiacao(int premioId)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM PREMIACOES WHERE id = :id");
+    query.bindValue(":id", premioId);
+    return query.exec();
 }
 
 QList<int> BingoDatabaseManager::getCartelasPorTelefone(int sorteioId, const QString &telefone)
@@ -179,11 +240,18 @@ QJsonArray BingoDatabaseManager::listarTodasChavesAcesso()
 QJsonArray BingoDatabaseManager::listarModelos()
 {
     QJsonArray array;
-    QSqlQuery query("SELECT id, nome FROM MODELOS_SORTEIO ORDER BY id");
+    QSqlQuery query("SELECT id, nome, config_padrao FROM MODELOS_SORTEIO ORDER BY id");
     while (query.next()) {
         QJsonObject obj;
         obj["id"] = query.value("id").toInt();
         obj["nome"] = query.value("nome").toString();
+        
+        QString configStr = query.value("config_padrao").toString();
+        if (!configStr.isEmpty()) {
+            QJsonDocument doc = QJsonDocument::fromJson(configStr.toUtf8());
+            obj["config"] = doc.object();
+        }
+        
         array.append(obj);
     }
     return array;
@@ -234,4 +302,52 @@ int BingoDatabaseManager::criarSorteioComChave(int modeloId, int baseId, const Q
     if (!m_db.commit()) return -1;
 
     return sorteioId;
+}
+bool BingoDatabaseManager::atualizarConfigSorteio(int sorteioId, int modeloId, int baseId, const QJsonObject &preferencias)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE SORTEIOS SET modelo_id = :mid, base_id = :bid, preferencias = :prefs WHERE id = :sid");
+    query.bindValue(":mid", modeloId);
+    query.bindValue(":bid", baseId);
+    
+    QJsonDocument doc(preferencias);
+    query.bindValue(":prefs", QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+    query.bindValue(":sid", sorteioId);
+    
+    return query.exec();
+}
+
+bool BingoDatabaseManager::salvarSorteioComoModelo(const QString &nome, const QJsonObject &config)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO MODELOS_SORTEIO (nome, config_padrao) VALUES (:nome, :config)");
+    query.bindValue(":nome", nome);
+    
+    QJsonDocument doc(config);
+    query.bindValue(":config", QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+    
+    return query.exec();
+}
+
+bool BingoDatabaseManager::removerUltimaBola(int sorteioId, int numero)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM BOLAS_SORTEADAS WHERE sorteio_id = :sid AND numero = :num");
+    query.bindValue(":sid", sorteioId);
+    query.bindValue(":num", numero);
+    return query.exec();
+}
+
+bool BingoDatabaseManager::limparSorteio(int sorteioId)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM BOLAS_SORTEADAS WHERE sorteio_id = :sid");
+    query.bindValue(":sid", sorteioId);
+    if (!query.exec()) {
+        qCritical() << "Erro ao limpar sorteio (bolas):" << query.lastError().text();
+        return false;
+    }
+    
+    qInfo() << "Sorteio" << sorteioId << "limpo com sucesso no banco de dados.";
+    return true;
 }

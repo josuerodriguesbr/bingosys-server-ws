@@ -43,6 +43,7 @@ private:
     void broadcastToGame(int sorteioId, const QJsonObject &json);
     void handleJsonMessage(QWebSocket *client, const QJsonObject &json);
     QJsonObject getTicketDetailsJson(int sorteioId, int ticketId);
+    QJsonObject getGameStatusJson(int sorteioId);
     
     // Inicializa ou retorna um motor para um sorteio específico
     BingoGameEngine* getEngine(int sorteioId);
@@ -52,7 +53,7 @@ private:
     QMap<QWebSocket *, ClientSession> m_sessions;
     quint16 m_port;
     
-    QVector<BingoTicket> m_masterTickets;
+    QMap<QString, QVector<BingoTicket>> m_ticketCache;
     QMap<int, GameInstance> m_gameInstances;
     BingoDatabaseManager *m_db;
     

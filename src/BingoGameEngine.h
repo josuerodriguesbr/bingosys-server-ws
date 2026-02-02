@@ -9,10 +9,18 @@
 
 struct TicketState {
     int ticketId;
-    int matches; // Quantidade de acertos
-    QSet<int> missingNumbers; // Numeros que faltam (opcional, para saber quais faltam)
-    // Ou apenas manter count se a performance for critica
+    int matches; // Quantidade de acertos na grade atual
+    QSet<int> missingNumbers; // Numeros que faltam (para fechar a grade atual)
     int totalNumbers;
+};
+
+struct Prize {
+    int id;
+    QString nome;
+    QString tipo; // "quina", "forma", "cheia"
+    QSet<int> padraoIndices; // Índices (0-24) que compõem o padrão (se for "forma")
+    QList<int> winners;
+    bool active;
 };
 
 class BingoGameEngine : public QObject
@@ -58,9 +66,14 @@ public:
     // Cancela a ultima bola sorteada
     int undoLastNumber();
 
+    // Gestão de Premiações
+    void addPrize(const Prize &prize);
+    void clearPrizes();
+    QList<Prize> getPrizes() const { return m_prizes; }
+
     // Getters para estado atual
     QList<int> getDrawnNumbers() const;
-    QList<int> getWinners() const; // IDs das cartelas ganhadoras
+    QList<int> getWinners() const; // IDs das cartelas ganhadoras (BINGO/Cheia)
     QMap<int, QList<int>> getNearWinTickets() const; // Map: Falta 1 -> [IDs], Falta 2 -> [IDs]...
 
 private:
@@ -80,6 +93,8 @@ private:
 
     QSet<int> m_registeredTickets; // IDs das cartelas vendidas
     QHash<int, int> m_idToDigit;   // Mapa de ID -> Digito Verificador
+    QHash<int, QList<int>> m_numToTickets; // Mapa Número -> List de Cartelas que o possuem
+    QList<Prize> m_prizes;         // Lista de prêmios configurados
 };
 
 #endif // BINGOGAMEENGINE_H

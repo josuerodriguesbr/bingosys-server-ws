@@ -64,11 +64,19 @@ QVector<BingoTicket> BingoTicketParser::parseFile(const QString &filePath)
         return tickets;
     }
 
+    // Tenta reservar espaço para evitar realocações lentas
+    tickets.reserve(600000); 
+
     QTextStream in(&file);
+    int count = 0;
     while (!in.atEnd()) {
         QString line = in.readLine();
         if (!line.trimmed().isEmpty()) {
             tickets.append(parseLine(line));
+            count++;
+            if (count % 100000 == 0) {
+                qInfo() << "Lendo cartelas..." << count;
+            }
         }
     }
     

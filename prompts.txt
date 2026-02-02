@@ -555,3 +555,40 @@ Vamos fazer assim, considere  ou seja já faça considerando isso, que o arquivo
  O que você acha?
 
 
+================================================================================
+Logue como Admin (admin / Bingo2026!@#).
+================================================================================
+
+
+=========================================================================================
+SSOBRE: QUINAS, FORMAS E CHEIA
+=========================================================================================
+
+Mas você já implementou também  o front-end dessa parte, tipo,  as telas onde o Operador 
+poderá definir uma Descrição para o prêmio e os indices ds formas ou quinas ou cartela cheia. 
+Porque vai funcionar assim: No caso das quinas, Primeira quina,  o formato da quina é uma reta  
+na grade, o Operador não precisa desenha as quinas, uma quina é uma sequencia de 5 celulas  
+consecutivas na grade, pode ser vertical, horizontal ou diagonal. O Operador só diz quantas 
+rodadas de quinas o sorteio terá, por exemplo se for duas rodadas de quinas, ele diz primeira 
+quina: uma geladeiera, segunda quina: uma TV. J´ as formas , o Operador tem que deenhar , 
+tem que ser criado um mecanismo em que o operador desenhe a forma , e é lógico, a grade vai
+ depender do tipo de grade selecionado para o sorteio, e  paraa cada forma o operador já 
+ define o premio correspondente, perto desse mecanismo de deenho das formas , terá uma
+  campo para colocar a descriçao do premio da forma, será bom também um campo para colocaaer
+   o nome da forma, deve existir no formulario uma lista de formas salvas, e eu acho que faz
+    entido a cartela cheia ser uma forma que preenche todasa as celulas da grade, ou seja,
+     a cartela cheia é uma forma  chapada. 
+Achoq eue dessa vez, eu estou lhe dando uma taarefa muito complexa. Será que vai dá certo?
+
+=========================================================================================
+
+Antes de eu tetar vvamos ver logo um ajuste, por exemplo, 5x5 cinco colunas e cinco 
+linhsa, da certo para bingos do tipo 75x25, mas para 75x15 tem que sser 5x3 cinco 
+colunas e 3 linhas. Isso já é possível fazer na implementação atual. Teremos 75x10,
+ 5x2 cinco colunas e duas linhas, entendeu a quesstão? O mecanismo de desenho das 
+ formas têm que ser dinâmico, relativo ao tipo do sorteio.
+
+Sobre as quinas diagonais, pode fazer assim, o sistema só terá quinas diagonais se 
+a grade for 5x5,  porque nos outros tipos de grade não dá pra formar quinas diagonais. 
+
+=========================================================================================

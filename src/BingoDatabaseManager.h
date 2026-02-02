@@ -30,7 +30,11 @@ public:
     // Sorteios (Individuais)
     QJsonObject getSorteio(int sorteioId);
     bool atualizarStatusSorteio(int sorteioId, const QString &status);
+    bool atualizarConfigSorteio(int sorteioId, int modeloId, int baseId, const QJsonObject &preferencias);
+    bool salvarSorteioComoModelo(const QString &nome, const QJsonObject &config);
     bool salvarBolaSorteada(int sorteioId, int numero);
+    bool removerUltimaBola(int sorteioId, int numero);
+    bool limparSorteio(int sorteioId);
     QList<int> getBolasSorteadas(int sorteioId);
 
     // Cartelas
@@ -40,6 +44,8 @@ public:
 
     // Premiações
     QJsonArray getPremiacoes(int sorteioId);
+    bool addPremiacao(int sorteioId, const QString &nome, const QString &tipo, const QJsonArray &padrao = QJsonArray(), int ordem = 0);
+    bool removerPremiacao(int premioId);
 
 private:
     QSqlDatabase m_db;

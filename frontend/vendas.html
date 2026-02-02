@@ -135,6 +135,44 @@
             font-weight: 800;
             margin-left: 0.5rem;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
     </style>
 </head>
 
@@ -162,18 +200,38 @@
         </div>
 
         <div class="glass-panel" style="padding: 2rem;">
-            <div style="margin-bottom: 1rem; text-align: center; color: var(--text-secondary);">
-                Aponte o leitor de código de barras ou digite o número:
+            <div
+                style="display: flex; gap: 1rem; align-items: flex-end; justify-content: center; margin-bottom: 0.5rem;">
+                <div style="flex: 1; max-width: 200px;">
+                    <label
+                        style="display: block; font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Telefone
+                        (Opcional)</label>
+                    <input type="tel" id="venda-telefone" placeholder="(00) 00000-0000"
+                        style="width:100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
+                </div>
+                <div style="flex: 2;">
+                    <label
+                        style="display: block; font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Código
+                        de Barras ou Número</label>
+                    <input type="text" id="barcode-input" class="barcode-input" placeholder="0000000" autofocus
+                        autocomplete="off" style="padding: 0.8rem; font-size: 1.5rem; height: 50px;">
+                </div>
             </div>
-            <input type="text" id="barcode-input" class="barcode-input" placeholder="0000000" autofocus
-                autocomplete="off">
+            <div style="text-align: center; color: var(--text-secondary); font-size: 0.8rem; margin-top: 1rem;">
+                Aponte o leitor de código de barras ou pressione Enter para confirmar.
+            </div>
         </div>
 
         <div class="glass-panel" style="padding: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                 <span style="color: var(--text-secondary); font-weight: 600;">LOG DE REGISTROS</span>
                 <div>
-                    <button onclick="addRandom(100)"
+                    <input type="file" id="file-import" style="display: none;" accept=".txt,.csv"
+                        onchange="handleFileImport(this)">
+                    <button onclick="document.getElementById('file-import').click()"
+                        style="background: #10b981; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white; margin-right: 0.5rem;">📁
+                        IMPORTAR</button>
+                    <button onclick="openBatchModal()"
                         style="background: var(--accent-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white; margin-right: 0.5rem;">+
                         100 TESTE</button>
                     <button onclick="clearSales()" class="btn-clear"
@@ -187,6 +245,27 @@
         </div>
     </div>
 
+    <!-- Modal Lote Teste -->
+    <div id="modal-batch" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Vender 100 Cartelas de Teste</div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem;">Telefone do
+                    Participante</label>
+                <input type="tel" id="batch-phone" placeholder="(00) 00000-0000"
+                    style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; text-align: center; font-size: 1.2rem;">
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeBatchModal()"
+                    style="background: none; border: 1px solid #475569; color: #94a3b8; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">CANCELAR</button>
+                <button onclick="confirmBatch()"
+                    style="background: var(--accent-primary); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600;">CONFIRMAR
+                    +100</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
     <script src="js/socket.js"></script>
     <script>
         const input = document.getElementById('barcode-input');
@@ -201,16 +280,27 @@
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const val = input.value.trim();
+                const tel = document.getElementById('venda-telefone').value.trim();
                 if (val) {
                     // Envia para o servidor
-                    bingoSocket.send("register_ticket", { barcode: parseInt(val) });
+                    bingoSocket.send("register_ticket", {
+                        barcode: parseInt(val),
+                        telefone: tel
+                    });
                     input.value = '';
                 }
             }
         });
 
-        // Foco constante no input para o leitor de código de barras
-        document.addEventListener('click', () => input.focus());
+        bingoSocket.on('connected', () => {
+            console.log("Conectado ao servidor. Sincronizando sessão...");
+            const session = BingoAuth.getSession();
+            if (session.chave) {
+                bingoSocket.send('login', { chave: session.chave });
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
 
         bingoSocket.on('sync_status', (data) => {
             elTotal.textContent = data.totalRegistered;
@@ -267,6 +357,11 @@
             elLog.insertBefore(li, elLog.firstChild);
         });
 
+        bingoSocket.on('batch_registration_finished', (data) => {
+            elTotal.textContent = data.totalRegistered;
+            alert(`${data.count} cartelas registradas em lote com sucesso!`);
+        });
+
         bingoSocket.on('sales_cleared', (data) => {
             elTotal.textContent = '0';
             elLast.textContent = '---';
@@ -280,8 +375,55 @@
             }
         }
 
-        function addRandom(n) {
-            bingoSocket.send("register_random", { count: n });
+        // Batch Test Functions
+        function openBatchModal() {
+            document.getElementById('modal-batch').style.display = 'flex';
+            document.getElementById('batch-phone').focus();
+        }
+        function closeBatchModal() {
+            document.getElementById('modal-batch').style.display = 'none';
+        }
+        function confirmBatch() {
+            const tel = document.getElementById('batch-phone').value.trim();
+            if (!tel) {
+                alert("Por favor, informe um telefone para as cartelas de teste.");
+                return;
+            }
+            bingoSocket.send("register_random", { count: 100, telefone: tel });
+            closeBatchModal();
+        }
+
+        // File Import Logic
+        function handleFileImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/);
+                const list = [];
+
+                lines.forEach(line => {
+                    const [barcode, telefone] = line.split(/[,;]/);
+                    if (barcode && barcode.trim()) {
+                        list.push({
+                            barcode: parseInt(barcode.trim()),
+                            telefone: (telefone || "").trim()
+                        });
+                    }
+                });
+
+                if (list.length > 0) {
+                    if (confirm(`Deseja importar ${list.length} registros de venda?`)) {
+                        bingoSocket.send("import_sales", { list: list });
+                    }
+                } else {
+                    alert("Nenhum registro encontrado no arquivo.");
+                }
+                input.value = ""; // Reset file input
+            };
+            reader.readAsText(file);
         }
     </script>
 </body>

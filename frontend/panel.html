@@ -114,30 +114,41 @@
         }
 
         /* Current Call - The Big One */
+        .main-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            min-height: 100%;
+            position: relative;
+        }
+
         .current-ball-display {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            flex: 1;
+            width: 100%;
+            min-height: 400px;
         }
 
         .big-ball {
-            width: 25vw;
-            height: 25vw;
-            max-width: 300px;
-            max-height: 300px;
+            width: clamp(200px, 30vw, 400px);
+            height: clamp(200px, 30vw, 400px);
+            background: radial-gradient(circle at 30% 30%, #3b82f6, #1e40af);
             border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, var(--accent-primary), #1e3a8a);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8rem;
-            font-weight: 800;
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 900;
             color: white;
-            box-shadow: 0 0 50px var(--accent-glow), inset 0 0 20px rgba(255, 255, 255, 0.3);
-            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            margin-bottom: 1rem;
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.5), inset 0 0 30px rgba(255, 255, 255, 0.2);
+            margin: 1.5rem 0;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            position: relative;
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
@@ -150,6 +161,110 @@
             to {
                 transform: scale(1);
                 opacity: 1;
+            }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow-y: auto;
+            }
+
+            aside {
+                height: auto;
+                max-height: 400px;
+            }
+
+            .big-ball {
+                width: 65vw;
+                height: 65vw;
+                font-size: 5rem;
+                margin: 1rem 0;
+            }
+
+            .main-display {
+                display: flex !important;
+                flex-direction: column !important;
+                overflow-y: auto !important;
+                height: auto !important;
+                padding-bottom: 2rem !important;
+            }
+
+            .current-ball-display {
+                height: auto !important;
+                min-height: 300px;
+                padding: 1rem 0;
+                justify-content: flex-start;
+            }
+
+            .admin-controls {
+                position: relative !important;
+                top: auto !important;
+                right: auto !important;
+                width: 100% !important;
+                margin: 1rem 0 !important;
+                order: 2;
+            }
+
+            .history-container {
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                margin-top: 1rem;
+                width: 100%;
+                order: 3;
+                background: rgba(0, 0, 0, 0.2) !important;
+                border-radius: var(--radius-md);
+            }
+
+            .input-manual {
+                width: 80px;
+                font-size: 1.5rem;
+            }
+
+            .top-navbar {
+                padding: 0.5rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-actions {
+                width: 100%;
+                justify-content: center;
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+
+            .nav-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .big-ball {
+                width: 70vw;
+                height: 70vw;
+                font-size: 4rem;
+            }
+
+            .admin-controls>div {
+                width: 100%;
+                justify-content: center;
+                border-right: none;
+                padding-right: 0;
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+            }
+
+            .admin-controls button {
+                flex: 1;
+                font-size: 0.75rem;
+                padding: 0.6rem 0.4rem;
             }
         }
 
@@ -194,22 +309,104 @@
         }
 
         .ticket-card.winner {
+            /* Default fallback */
             border-color: var(--success);
             box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
         }
 
+        .ticket-card.winner-cheia {
+            border-color: var(--success);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+        }
+
+        .ticket-card.winner-quina {
+            border-color: #f59e0b;
+            /* Amber */
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+        }
+
+        .ticket-card.winner-forma {
+            border-color: #8b5cf6;
+            /* Violet */
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Header colors override */
+        .ticket-card.winner-quina .ticket-header span:first-child {
+            color: #f59e0b !important;
+        }
+
+        .ticket-card.winner-forma .ticket-header span:first-child {
+            color: #8b5cf6 !important;
+        }
+
+        /* NEAR WINS (Falta 1) */
         .ticket-card.near-1 {
             border-color: var(--warning);
         }
 
-        .ticket-header {
+        .ticket-card.near-cheia {
+            border-color: var(--warning);
+        }
+
+        .ticket-card.near-quina {
+            border-color: rgba(245, 158, 11, 0.6);
+            /* border-left: 4px solid #f59e0b; */
+        }
+
+        .ticket-card.near-forma {
+            border-color: rgba(139, 92, 246, 0.6);
+        }
+
+        /* HEADER STYLES (Solid Backgrounds) */
+        .ticket-card .ticket-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin: -1rem -1rem 0.75rem -1rem;
+            /* Expand to edges */
+            padding: 0.5rem 1rem;
             font-size: 0.9rem;
             font-weight: 700;
+            background: rgba(255, 255, 255, 0.05);
+            /* Default */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        .ticket-card.winner .ticket-header,
+        .ticket-card.winner-cheia .ticket-header {
+            background: var(--success);
+            color: #000;
+        }
+
+        .ticket-card.winner-quina .ticket-header {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .ticket-card.winner-forma .ticket-header {
+            background: #8b5cf6;
+            color: #fff;
+        }
+
+        /* Near headers */
+        .ticket-card.near-1 .ticket-header,
+        .ticket-card.near-cheia .ticket-header {
+            background: rgba(234, 179, 8, 0.2);
+            color: var(--warning);
+        }
+
+        .ticket-card.near-quina .ticket-header {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .ticket-card.near-forma .ticket-header {
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+
+
 
         .bingo-container {
             user-select: none;
@@ -270,17 +467,18 @@
 
         /* Admin Controls */
         .admin-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 1rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             z-index: 100;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 0.75rem;
-            border-radius: var(--radius-md);
-            backdrop-filter: blur(5px);
-            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: auto;
+            max-width: 90%;
         }
 
         .input-manual {
@@ -464,6 +662,83 @@
             color: var(--accent-glow);
             border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
         }
+
+        .history-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-top: auto;
+        }
+
+        /* Prize/Shape Editor Styles */
+        .prize-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.8rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .prize-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prize-name {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .prize-type {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .shape-editor-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .shape-editor-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            width: fit-content;
+            margin: 1.5rem auto;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .shape-cell {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .shape-cell:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .shape-cell.active {
+            background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+            border-color: #fff;
+        }
     </style>
 </head>
 
@@ -473,8 +748,11 @@
         <div class="nav-logo">BINGOSYS</div>
         <div id="game-status-badge" class="nav-actions">
             <div id="mode-display" class="mode-badge">75 Bolas | 1 Chance</div>
-            <a href="vendas.html" class="nav-btn">🛒 VENDAS</a>
-            <button onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
+            <button id="btn-invite" onclick="copyInviteLink()" class="nav-btn"
+                style="border-color: #10b981; color: #10b981;">🔗 CONVITE</button>
+            <a href="vendas.html" id="btn-sales" class="nav-btn">🛒 VENDAS</a>
+            <button id="btn-prizes" onclick="openPrizes()" class="nav-btn">🏆 PREMIAÇÕES</button>
+            <button id="btn-settings" onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
             <button onclick="logout()" class="nav-btn" style="color: var(--danger)">🚪 SAIR</button>
         </div>
     </nav>
@@ -482,15 +760,24 @@
     <div class="main-grid">
         <!-- Left: Near Wins (Good) -->
         <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
-            <div class="section-title">Boa (Falta 1)</div>
-            <ul id="list-near-1" class="ticket-list" style="flex: 1;">
-                <!-- Items injected via JS -->
-            </ul>
-            <div id="more-near-1" class="more-badge" style="display: none;"></div>
+            <div id="section-boa">
+                <div class="section-title">Boa (Falta 1)</div>
+                <ul id="list-near-1" class="ticket-list" style="flex: 1;">
+                    <!-- Items injected via JS -->
+                </ul>
+                <div id="more-near-1" class="more-badge" style="display: none;"></div>
+            </div>
+
+            <div id="section-my-tickets" style="display: none; flex: 1; flex-direction: column;">
+                <div class="section-title" style="color: #10b981; border-color: #10b981;">Minhas Cartelas</div>
+                <ul id="list-my-tickets" class="ticket-list" style="flex: 1;">
+                    <!-- Participantes as cartelas aqui -->
+                </ul>
+            </div>
         </aside>
 
         <!-- Center: Highlights -->
-        <main class="glass-panel" style="position: relative; overflow: hidden;">
+        <main class="glass-panel main-display">
             <div class="current-ball-display">
                 <div
                     style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">
@@ -502,28 +789,30 @@
                     EM JOGO</div>
             </div>
 
-            <!-- Bottom: History -->
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.3); padding: 1rem;">
-                <div style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary);">HISTÓRICO</div>
-                <div id="history-row" class="balls-history">
-                    <!-- Balls injected here -->
-                </div>
-            </div>
-
-            <!-- Admin Controls Overlay -->
+            <!-- Admin Controls -->
             <div class="admin-controls">
                 <div
                     style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1rem; margin-right: 0.5rem;">
-                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="90">
+                    <input type="number" id="manual-num" class="input-manual" placeholder="00" min="1" max="99">
                     <button id="btn-confirm" onclick="drawManual()"
-                        style="background: var(--accent-primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600;">CONFIRMAR</button>
+                        style="background: var(--accent-primary); color: white; border: none; padding: 0.6rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;">CONFIRMAR</button>
                 </div>
                 <button id="btn-random" onclick="drawRandomNumber()"
-                    style="background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; margin-right: 0.5rem;">ALEATÓRIO</button>
+                    style="background: var(--success); color: white; border: none; padding: 0.6rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;">ALEATÓRIO</button>
                 <button id="btn-undo" onclick="undoLast()"
-                    style="background: var(--warning); color: #000; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem; margin-right: 0.5rem;">DESFAZER</button>
+                    style="background: var(--warning); color: #000; border: none; padding: 0.6rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;">DESFAZER</button>
                 <button id="btn-reset" onclick="requestNewGame()"
-                    style="background: var(--danger); color: white; border: none; padding: 0.5rem 0.75rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 0.8rem;">RESET</button>
+                    style="background: #ef4444; color: white; border: none; padding: 0.6rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;">RESET</button>
+            </div>
+
+            <!-- Bottom: History -->
+            <div class="history-container">
+                <div
+                    style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                    Histórico de Bolas</div>
+                <div id="history-row" class="balls-history">
+                    <!-- Balls injected here -->
+                </div>
             </div>
         </main>
 
@@ -545,8 +834,15 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Modo de Jogo</label>
-                <select id="cfg-mode" class="form-select">
+                <label class="form-label">Modelo (Template)</label>
+                <select id="cfg-modelo" class="form-select" onchange="aplicarModelo(this.value)">
+                    <!-- Dinamicamente preenchido -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Base de Dados</label>
+                <select id="cfg-base" class="form-select">
                     <!-- Dinamicamente preenchido -->
                 </select>
             </div>
@@ -569,7 +865,56 @@
 
             <div class="modal-footer">
                 <button onclick="closeSettings()" class="nav-btn">Cancelar</button>
+                <button onclick="salvarComoModelo()" class="nav-btn"
+                    style="border-color: #f59e0b; color: #f59e0b;">Salvar como Modelo</button>
                 <button onclick="saveSettings()" class="nav-btn primary">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Prizes -->
+    <div id="modal-prizes" class="modal-overlay">
+        <div class="modal-card" style="width: 500px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <div class="modal-title">Gestão de Premiações</div>
+                <button onclick="closePrizes()"
+                    style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <div class="section-title" style="font-size: 0.9rem;">Prêmios Ativos</div>
+                <div id="prizes-list-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+                    <!-- Lista de prêmios dinamicamente aqui -->
+                </div>
+            </div>
+
+            <div class="section-title" style="font-size: 0.9rem;">Adicionar Novo Prêmio</div>
+            <div class="form-group">
+                <label class="form-label">Descrição do Prêmio</label>
+                <input type="text" id="prz-nome" class="form-input" placeholder="Ex: TV 50 Pol, Geladeira...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tipo de Vitória</label>
+                <select id="prz-tipo" class="form-select" onchange="togglePrizeEditor(this.value)">
+                    <option value="quina">Quina (Horizontal, Vertical ou Diag)</option>
+                    <option value="forma">Forma (Desenho Customizado)</option>
+                    <option value="cheia">Cartela Cheia (Bingo)</option>
+                </select>
+            </div>
+
+            <div id="prz-shape-editor" class="shape-editor-container" style="display: none;">
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Clique no grid para
+                    desenhar o padrão:</div>
+                <div id="shape-grid" class="shape-editor-grid">
+                    <!-- Gerado via JS -->
+                </div>
+                <button onclick="clearShapeGrid()" class="nav-btn"
+                    style="font-size: 0.7rem; padding: 0.3rem 0.6rem;">Limpar Grade</button>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closePrizes()" class="nav-btn">Fechar</button>
+                <button onclick="saveNewPrize()" class="nav-btn primary">Adicionar à Lista</button>
             </div>
         </div>
     </div>
@@ -592,6 +937,9 @@
 
         // State
         let drawnNumbers = [];
+        let myTickets = [];
+        let session = BingoAuth.getSession();
+
         let lastWinners = [];
         let lastNearWins = {};
         let config = {
@@ -605,10 +953,74 @@
         let showAllWinners = false;
         let showAllNear1 = false;
 
-        // Socket Events
+        function copyInviteLink() {
+            const url = window.location.origin + window.location.pathname.replace('panel.html', 'login.html') + '?chave=' + session.chave;
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Link de convite copiado!\n\nEnvie para os participantes:\n" + url);
+            });
+        }
+
+        function checkParticipantMode() {
+            if (session.isOperator) {
+                // Força a exibição dos controles se for operador
+                document.querySelector('.admin-controls').style.display = 'flex';
+                document.getElementById('btn-sales').style.display = 'block';
+                document.getElementById('btn-settings').style.display = 'block';
+                document.getElementById('btn-invite').style.display = 'block';
+                if (document.getElementById('btn-prizes')) document.getElementById('btn-prizes').style.display = 'block';
+
+                document.getElementById('section-boa').style.display = 'block';
+                document.getElementById('section-my-tickets').style.display = 'none';
+            } else if (session.telefone) {
+                // Modo Participante puro
+                document.querySelector('.admin-controls').style.display = 'none';
+                document.getElementById('btn-sales').style.display = 'none';
+                document.getElementById('btn-settings').style.display = 'none';
+                document.getElementById('btn-invite').style.display = 'none';
+
+                document.getElementById('section-boa').style.display = 'none';
+                document.getElementById('section-my-tickets').style.display = 'flex';
+
+                bingoSocket.send('get_my_tickets', { telefone: session.telefone });
+            }
+        }
+
         bingoSocket.on('connected', () => {
-            console.log('Painel conectado!');
+            console.log("Conectado ao servidor. Sincronizando sessão...");
+            const sess = BingoAuth.getSession();
+            if (sess.chave) {
+                bingoSocket.send('login', { chave: sess.chave });
+            } else {
+                window.location.href = 'login.html';
+            }
         });
+
+        bingoSocket.on('login_success', (data) => {
+            console.log('Painel autenticado!');
+            session = BingoAuth.getSession(); // Recarrega dados atualizados (como isOperator)
+            checkParticipantMode();
+        });
+
+        bingoSocket.on('my_tickets_response', (data) => {
+            myTickets = data.tickets || [];
+            renderMyTickets();
+        });
+
+        function renderMyTickets() {
+            const el = document.getElementById('list-my-tickets');
+            el.innerHTML = "";
+            myTickets.forEach(ticket => {
+                const div = document.createElement('div');
+                div.className = 'ticket-card';
+                div.innerHTML = `
+                    <div class="ticket-header">
+                        <span>🏷️ #${ticket.barcode}</span>
+                    </div>
+                    ${renderBingoGrid(ticket.numbers)}
+                `;
+                el.appendChild(div);
+            });
+        }
 
         bingoSocket.on('sync_status', (data) => {
             // Sincroniza vendas
@@ -632,11 +1044,9 @@
                 elCurrentBall.textContent = "--";
             }
 
-            // Sincroniza listas
-            if (data.winners) {
-                lastWinners = data.winners;
-                updateWinners(lastWinners);
-            }
+            // Sincroniza listas (Usa aggregateWinners para juntar todos)
+            lastWinners = aggregateWinners(data);
+            updateWinners(lastWinners);
             if (data.near_wins) {
                 lastNearWins = data.near_wins;
                 updateNearWins(lastNearWins);
@@ -647,12 +1057,14 @@
             if (data.gridIndex) config.gridIndex = data.gridIndex;
             if (data.numChances) config.numChances = data.numChances;
             if (data.historyLimit) config.historyLimit = data.historyLimit;
+            if (data.tipo_grade) config.tipo_grade = data.tipo_grade;
 
             if (data.modes) {
                 availableModes = data.modes;
                 populateModesList();
             }
 
+            renderMyTickets();
             updateConfigBadge();
         });
 
@@ -661,20 +1073,26 @@
             config.gridIndex = data.gridIndex;
             config.numChances = data.numChances;
             config.historyLimit = data.historyLimit;
+            if (data.tipo_grade) config.tipo_grade = data.tipo_grade;
             updateConfigBadge();
-
-            // Sincroniza campos se o administrador estiver com o modal aberto
-            syncSettingsFields();
         });
 
         bingoSocket.on('number_drawn', (data) => {
+            console.log("Bola sorteada:", data.number);
             const num = data.number;
-            drawnNumbers.push(num);
-            updateDisplay(num);
 
-            // Re-renderiza listas para atualizar destaques nos grids
+            // Evita duplicados se o sync vier quase junto
+            if (!drawnNumbers.includes(num)) {
+                drawnNumbers.push(num);
+                updateDisplay(num);
+            }
+
+            // Atualiza ganhadores unificando listas
+            lastWinners = aggregateWinners(data);
+
             updateWinners(lastWinners);
             updateNearWins(lastNearWins);
+            renderMyTickets();
         });
 
         bingoSocket.on('number_cancelled', (data) => {
@@ -700,6 +1118,7 @@
             // Re-renderiza para atualizar destaques
             updateWinners(lastWinners);
             updateNearWins(lastNearWins);
+            renderMyTickets();
         });
 
         bingoSocket.on('ticket_registered', (data) => {
@@ -767,16 +1186,17 @@
 
         function updateDisplay(number) {
             // Update Big Ball
-            // Trigger animation reset
-            elCurrentBall.style.animation = 'none';
-            elCurrentBall.offsetHeight; /* trigger reflow */
-            elCurrentBall.style.animation = null;
             elCurrentBall.textContent = number < 10 ? '0' + number : number;
+
+            // Re-trigger popIn animation
+            elCurrentBall.style.animation = 'none';
+            void elCurrentBall.offsetWidth; // trigger reflow
+            elCurrentBall.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
             // Add to history
             const ball = document.createElement('div');
             ball.className = 'ball animate-fade-in';
-            ball.textContent = number;
+            ball.textContent = number < 10 ? '0' + number : number;
             // Prepend
             elHistory.insertBefore(ball, elHistory.firstChild);
         }
@@ -797,12 +1217,18 @@
             toShow.forEach(ticket => {
                 try {
                     const div = document.createElement('div');
-                    div.className = 'ticket-card winner';
+                    // Define classe baseada no tipo (quina, forma, cheia)
+                    // Se não tiver tipo (legado), assume cheia (winner)
+                    const typeClass = ticket.winType ? `winner-${ticket.winType}` : 'winner-cheia';
+                    const prizeLabel = ticket.prizeName ? ticket.prizeName.toUpperCase() : 'GANHOU!';
+
+                    div.className = `ticket-card ${typeClass}`;
+
                     let gridHtml = renderBingoGrid(ticket.numbers);
                     div.innerHTML = `
                         <div class="ticket-header">
-                            <span style="color: var(--success)">🏆 #${ticket.barcode}</span>
-                            <span>GANHOU!</span>
+                            <span>🏆 #${ticket.barcode}</span>
+                            <span style="font-size:0.8em">${prizeLabel}</span>
                         </div>
                         ${gridHtml}
                     `;
@@ -811,28 +1237,103 @@
             });
         }
 
-        function updateNearWins(nearWins) {
-            lastNearWins = nearWins || {};
-            elListNear1.innerHTML = "";
-            let list1 = lastNearWins["1"] || [];
+        function aggregateWinners(data) {
+            let all = [];
+            // 1. Bingo Cheio (padrão 'winners')
+            if (data.winners && Array.isArray(data.winners)) {
+                data.winners.forEach(w => {
+                    let o = { ...w };
+                    o.winType = 'cheia';
+                    o.prizeName = 'BINGO!';
+                    all.push(o);
+                });
+            }
+            // 2. Prêmios Customizados
+            if (data.prizes && Array.isArray(data.prizes)) {
+                data.prizes.forEach(p => {
+                    if (p.winners && Array.isArray(p.winners)) {
+                        p.winners.forEach(w => {
+                            let o = { ...w };
+                            o.winType = p.tipo; // quina, forma
+                            o.prizeName = p.nome;
+                            all.push(o);
+                        });
+                    }
+                });
+            }
+            return all;
+        }
 
-            if (list1.length > 3 && !showAllNear1) {
+        function aggregateNearWins(data) {
+            let byType = {};
+            // 1. Bingo Cheio (padrão 'near_wins') -> chave "1" é falta 1
+            if (data.near_wins && data.near_wins["1"]) {
+                byType["cheia"] = data.near_wins["1"].map(w => {
+                    let o = { ...w };
+                    o.winType = 'cheia';
+                    o.prizeName = 'BINGO CHEIO';
+                    return o;
+                });
+            }
+
+            // 2. Prêmios Customizados (near_winners)
+            if (data.prizes && Array.isArray(data.prizes)) {
+                data.prizes.forEach(p => {
+                    if (p.near_winners && Array.isArray(p.near_winners)) {
+                        let formatted = p.near_winners.map(w => {
+                            let o = { ...w };
+                            o.winType = p.tipo;
+                            o.prizeName = p.nome;
+                            return o;
+                        });
+                        // Agrupa tudo sob uma chave, ou mescla?
+                        // Vamos mesclar tudo numa lista única de "Falta 1"
+                        if (!byType["custom"]) byType["custom"] = [];
+                        byType["custom"] = byType["custom"].concat(formatted);
+                    }
+                });
+            }
+            return byType;
+        }
+
+        function updateNearWins(nearWinsData) {
+            // Suporta formato antigo (objeto direto) ou novo (aggregated)
+            // Se veio do socket direto:
+            let list = [];
+
+            // Se já foi processado por aggregateNearWins:
+            if (nearWinsData.cheia) list = list.concat(nearWinsData.cheia);
+            if (nearWinsData.custom) list = list.concat(nearWinsData.custom);
+
+            // Filtro de unicidade (uma cartela pode faltar 1 para quina E bingo)
+            // Prioridade visual? Se faltar 1 pra bingo e quina, mostra qual?
+            // Vamos mostrar duplicado ou apenas o mais importante? 
+            // Melhor mostrar duplicado para operado ver todas as chances.
+
+            elListNear1.innerHTML = "";
+            let toShow = list;
+
+            if (toShow.length > 5 && !showAllNear1) {
                 elMoreNear1.style.display = 'block';
-                elMoreNear1.textContent = `+ ${list1.length - 3} armadas`;
-                list1 = list1.slice(0, 3);
+                elMoreNear1.textContent = `+ ${toShow.length - 5} armadas`;
+                toShow = toShow.slice(0, 5);
             } else {
                 elMoreNear1.style.display = 'none';
             }
 
-            list1.forEach(ticket => {
+            toShow.forEach(ticket => {
                 try {
                     const div = document.createElement('div');
-                    div.className = 'ticket-card near-1';
+                    // Classes visuais para "near"
+                    const typeClass = ticket.winType ? `near-${ticket.winType}` : 'near-1';
+                    const label = ticket.prizeName ? `FALTA 1 - ${ticket.prizeName}` : 'FALTA 1';
+
+                    div.className = `ticket-card ${typeClass}`;
                     let gridHtml = renderBingoGrid(ticket.numbers);
                     div.innerHTML = `
                         <div class="ticket-header">
-                            <span style="color: var(--warning)">🔥 #${ticket.barcode}</span>
-                            <span>FALTA 1</span>
+                            <span style="color: inherit">🔥 #${ticket.barcode}</span>
+                            <span style="font-size:0.75em">${label}</span>
                         </div>
                         ${gridHtml}
                     `;
@@ -868,82 +1369,228 @@
         }
 
         function resetBoard() {
-            elCurrentBall.textContent = "--";
-            elHistory.innerHTML = "";
-            elListNear1.innerHTML = "";
-            elListWinners.innerHTML = "";
-            elMoreNear1.style.display = 'none';
-            elMoreWinners.style.display = 'none';
             drawnNumbers = [];
+            elHistory.innerHTML = "";
+            elCurrentBall.textContent = "--";
+            elCurrentBall.classList.remove('animate-pop-in');
+
             lastWinners = [];
             lastNearWins = {};
-            showAllWinners = false;
             showAllNear1 = false;
         }
 
         // Settings Modal Logic
-        function openSettings() {
-            document.getElementById('modal-settings').style.display = 'flex';
-            syncSettingsFields();
-        }
+        let modelosCache = [];
+        let basesCache = [];
 
-        function syncSettingsFields() {
-            // Encontra o modo atual na lista
-            const mode = availableModes.find(m => m.balls == config.maxBalls && m.grid == config.gridIndex);
-            if (mode) {
-                document.getElementById('cfg-mode').value = mode.id;
-            }
-            document.getElementById('cfg-chances').value = config.numChances;
-            document.getElementById('cfg-history-limit').value = config.historyLimit || 10;
+        function openSettings() {
+            bingoSocket.send('get_draw_config');
+            document.getElementById('modal-settings').style.display = 'flex';
         }
 
         function closeSettings() {
             document.getElementById('modal-settings').style.display = 'none';
         }
 
+        bingoSocket.on('draw_config_response', (data) => {
+            console.log("draw_config_response recebido:", JSON.stringify(data));
+            const d = data.draw;
+            console.log("draw object:", JSON.stringify(d));
+            console.log("tipo_grade do draw:", d ? d.tipo_grade : "draw é null");
+
+            const modelSelect = document.getElementById('cfg-modelo');
+            const baseSelect = document.getElementById('cfg-base');
+
+            modelosCache = data.modelos || [];
+            basesCache = data.bases || [];
+
+            if (modelSelect) modelSelect.innerHTML = modelosCache.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+            if (baseSelect) baseSelect.innerHTML = basesCache.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+
+            if (modelSelect) modelSelect.value = d.modelo_id;
+            if (baseSelect) baseSelect.value = d.base_id;
+
+            // Atualiza tipo_grade no config global
+            if (d && d.tipo_grade) {
+                config.tipo_grade = d.tipo_grade;
+                console.log("Config tipo_grade EFETIVAMENTE atualizado para:", config.tipo_grade);
+
+                // Recria o grid de formas se o editor estiver visível
+                const shapeEditor = document.getElementById('prz-shape-editor');
+                if (shapeEditor && shapeEditor.style.display !== 'none') {
+                    console.log("Recriando shape grid com tipo_grade:", config.tipo_grade);
+                    createShapeGrid();
+                }
+            } else {
+                console.warn("tipo_grade NÃO encontrado na resposta do servidor!");
+            }
+
+            const p = d ? d.preferencias || {} : {};
+            if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = p.numChances || 1;
+            if (document.getElementById('cfg-history-limit')) document.getElementById('cfg-history-limit').value = p.historyLimit || 10;
+        });
+
+        function aplicarModelo(id) {
+            const m = modelosCache.find(mod => mod.id == id);
+            if (m && m.config) {
+                if (document.getElementById('cfg-history-limit')) document.getElementById('cfg-history-limit').value = m.config.historyLimit || 10;
+                if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = m.config.numChances || 1;
+            }
+        }
+
+        function salvarComoModelo() {
+            const nome = prompt("Digite o nome deste novo modelo:");
+            if (!nome) return;
+
+            const config = {
+                historyLimit: parseInt(document.getElementById('cfg-history-limit').value),
+                numChances: parseInt(document.getElementById('cfg-chances').value)
+            };
+
+            bingoSocket.send('save_as_template', { nome, config });
+            alert("Modelo salvo com sucesso!");
+        }
+
         function saveSettings() {
-            const modeId = parseInt(document.getElementById('cfg-mode').value);
+            const modeloId = parseInt(document.getElementById('cfg-modelo').value);
+            const baseId = parseInt(document.getElementById('cfg-base').value);
             const numChances = parseInt(document.getElementById('cfg-chances').value);
             const historyLimit = parseInt(document.getElementById('cfg-history-limit').value);
 
-            const mode = availableModes.find(m => m.id === modeId);
-            if (!mode) return;
-
             bingoSocket.send("update_config", {
-                maxBalls: mode.balls,
-                gridIndex: mode.grid,
-                numChances: numChances,
-                historyLimit: historyLimit
+                modelo_id: modeloId,
+                base_id: baseId,
+                preferencias: {
+                    numChances: numChances,
+                    historyLimit: historyLimit
+                }
             });
 
             closeSettings();
         }
 
-        function populateModesList() {
-            const select = document.getElementById('cfg-mode');
-            select.innerHTML = "";
-            availableModes.forEach(mode => {
-                const opt = document.createElement('option');
-                opt.value = mode.id;
-                opt.textContent = mode.name;
-                select.appendChild(opt);
+        // --- Gestão de Premiações ---
+        let currentPrizes = [];
+        let shapeIndices = new Set();
+
+        function openPrizes() {
+            // Solicita config atualizado para garantir tipo_grade correto
+            bingoSocket.send('get_draw_config');
+            document.getElementById('modal-prizes').style.display = 'flex';
+            bingoSocket.send('get_prizes');
+        }
+
+        function closePrizes() {
+            document.getElementById('modal-prizes').style.display = 'none';
+        }
+
+        bingoSocket.on('prizes_list', (data) => {
+            currentPrizes = data.prizes || [];
+            renderPrizeList();
+        });
+
+        function renderPrizeList() {
+            const container = document.getElementById('prizes-list-container');
+            if (!currentPrizes.length) {
+                container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Nenhum prêmio cadastrado.</div>';
+                return;
+            }
+            container.innerHTML = currentPrizes.map(p => `
+                <div class="prize-item">
+                    <div class="prize-info">
+                        <span class="prize-name">${p.nome}</span>
+                        <span class="prize-type">${p.tipo}</span>
+                    </div>
+                    <button onclick="deletePrize(${p.id})" style="background:var(--danger); border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">Remover</button>
+                </div>
+            `).join('');
+        }
+
+        function togglePrizeEditor(tipo) {
+            const editor = document.getElementById('prz-shape-editor');
+            if (tipo === 'forma') {
+                editor.style.display = 'block';
+                // Solicita config atualizado e depois desenha o grid
+                bingoSocket.send('get_draw_config');
+                createShapeGrid(); // Desenha imediatamente com o que temos
+            } else {
+                editor.style.display = 'none';
+            }
+        }
+
+        function createShapeGrid() {
+            const gridEl = document.getElementById('shape-grid');
+            gridEl.innerHTML = '';
+
+            // Detecta dimensões baseado no tipo_grade (ex: 75x15 -> 15 números -> 5x3)
+            let cols = 5;
+            let rows = 5;
+            if (config.tipo_grade && config.tipo_grade.includes('x')) {
+                const total = parseInt(config.tipo_grade.split('x')[1]);
+                rows = total / cols;
+            }
+
+            console.log("Desenhando editor de formas para grade:", config.tipo_grade || "5x5", "Rows:", rows);
+
+            // Ajusta o CSS do grid dinamicamente
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridEl.style.width = 'fit-content';
+
+            const totalCells = cols * rows;
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'shape-cell';
+                if (shapeIndices.has(i)) cell.classList.add('active');
+                cell.onclick = () => {
+                    if (shapeIndices.has(i)) shapeIndices.delete(i);
+                    else shapeIndices.add(i);
+                    cell.classList.toggle('active');
+                };
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function clearShapeGrid() {
+            shapeIndices.clear();
+            createShapeGrid();
+        }
+
+        function saveNewPrize() {
+            const nome = document.getElementById('prz-nome').value;
+            const tipo = document.getElementById('prz-tipo').value;
+            if (!nome) return alert("Por favor, informe a descrição do prêmio.");
+
+            const padrao = (tipo === 'forma') ? Array.from(shapeIndices) : [];
+
+            bingoSocket.send('add_prize', {
+                nome, tipo, padrao, ordem: currentPrizes.length + 1
             });
+
+            // Limpa form
+            document.getElementById('prz-nome').value = '';
+            shapeIndices.clear();
+            alert("Prêmio adicionado com sucesso!");
+            bingoSocket.send('get_prizes');
+        }
+
+        function deletePrize(id) {
+            if (confirm("Deseja remover este prêmio?")) {
+                bingoSocket.send('delete_prize', { id });
+                setTimeout(() => bingoSocket.send('get_prizes'), 500);
+            }
         }
 
         function updateConfigBadge() {
             const badge = document.getElementById('mode-display');
             if (badge) {
-                const mode = availableModes.find(m => m.balls == config.maxBalls && m.grid == config.gridIndex);
-                const modeName = mode ? mode.name : `${config.maxBalls} Bolas | Grade ${parseInt(config.gridIndex) + 1}`;
-                badge.textContent = `${modeName} | ${config.numChances} Chance(s)`;
+                // Simplificado para o modo atual
+                badge.textContent = `Sorteio #${drawnNumbers.length > 0 ? "Em Andamento" : "Pronto"}`;
             }
-            // Atualiza o placeholder do manual input
-            elManualInput.max = config.maxBalls;
+            if (elManualInput) elManualInput.max = config.maxBalls || 75;
         }
-        
-        // Botão de Sair
+
         function logout() {
-            if(confirm("Deseja sair do painel?")) {
+            if (confirm("Deseja sair do painel?")) {
                 BingoAuth.logout();
             }
         }

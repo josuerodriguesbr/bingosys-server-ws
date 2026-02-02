@@ -14,28 +14,47 @@ class BingoSocket {
         this.socket.onopen = () => {
             console.log('WebSocket Connected');
             this.isConnected = true;
+            this.startHeartbeat();
             this.emit('connected');
         };
 
         this.socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                if (data.action === 'pong') return; // Ignore heatbeat response
                 this.handleMessage(data);
             } catch (e) {
-                console.warn('Received non-JSON message:', event.data);
+                console.error('Error parsing message:', e);
             }
         };
 
         this.socket.onclose = () => {
-            console.log('WebSocket Disconnected. Reconnecting in 3s...');
+            console.log('WebSocket Disconnected');
             this.isConnected = false;
+            this.stopHeartbeat();
             this.emit('disconnected');
+            // Tenta reconectar em 3s
             setTimeout(() => this.connect(), 3000);
         };
 
         this.socket.onerror = (err) => {
             console.error('WebSocket Error:', err);
         };
+    }
+
+    startHeartbeat() {
+        this.heartbeatInterval = setInterval(() => {
+            if (this.isConnected) {
+                this.send('ping', {});
+            }
+        }, 30000); // 30 segundos
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
     }
 
     send(action, payload = {}) {
@@ -49,11 +68,22 @@ class BingoSocket {
             this.callbacks[event] = [];
         }
         this.callbacks[event].push(callback);
+
+        // Se o evento for 'connected' e já estivermos conectados, executa o callback imediatamente
+        if (event === 'connected' && this.isConnected) {
+            callback();
+        }
     }
 
     emit(event, data) {
         if (this.callbacks[event]) {
-            this.callbacks[event].forEach(cb => cb(data));
+            this.callbacks[event].forEach(cb => {
+                try {
+                    cb(data);
+                } catch (e) {
+                    console.error(`Error in callback for event ${event}:`, e);
+                }
+            });
         }
     }
 
@@ -66,7 +96,7 @@ class BingoSocket {
                 this.emit('login_error', data);
             }
         }
-        
+
         if (data.action) {
             this.emit(data.action, data);
         }
