@@ -18,9 +18,11 @@ struct Prize {
     int id;
     QString nome;
     QString tipo; // "quina", "forma", "cheia"
-    QSet<int> padraoIndices; // Índices (0-24) que compõem o padrão (se for "forma")
+    QSet<int> padraoIndices; // Índices (0-24) que compõem o padrão
     QList<int> winners;
+    QList<int> near_winners;
     bool active;
+    bool realizada;
 };
 
 class BingoGameEngine : public QObject
@@ -69,6 +71,7 @@ public:
     // Gestão de Premiações
     void addPrize(const Prize &prize);
     void clearPrizes();
+    void setPrizeStatus(int id, bool realizada);
     QList<Prize> getPrizes() const { return m_prizes; }
 
     // Getters para estado atual

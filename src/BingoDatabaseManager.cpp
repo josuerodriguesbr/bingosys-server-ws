@@ -2,6 +2,8 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QJsonDocument>
+#include <QFile>
+#include <QTextStream>
 
 BingoDatabaseManager::BingoDatabaseManager(QObject *parent) : QObject(parent)
 {
@@ -147,6 +149,7 @@ QJsonArray BingoDatabaseManager::getPremiacoes(int sorteioId)
             obj["id"] = query.value("id").toInt();
             obj["nome"] = query.value("nome_premio").toString();
             obj["tipo"] = query.value("tipo").toString();
+            obj["realizada"] = query.value("realizada").toBool();
             
             QString padraoStr = query.value("padrao_grade").toString();
             if (!padraoStr.isEmpty()) {
@@ -349,5 +352,58 @@ bool BingoDatabaseManager::limparSorteio(int sorteioId)
     }
     
     qInfo() << "Sorteio" << sorteioId << "limpo com sucesso no banco de dados.";
+    return true;
+}
+
+bool BingoDatabaseManager::atualizarStatusPremiacao(int premioId, bool realizada)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE PREMIACOES SET realizada = :status WHERE id = :id");
+    query.bindValue(":status", realizada);
+    query.bindValue(":id", premioId);
+    return query.exec();
+}
+
+bool BingoDatabaseManager::executarScriptSQL(const QString &caminho)
+{
+    QFile arquivo(caminho);
+    if (!arquivo.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qCritical() << "executarScriptSQL: Nao foi possivel abrir o arquivo:" << caminho;
+        return false;
+    }
+
+    QTextStream in(&arquivo);
+    QString script = in.readAll();
+    arquivo.close();
+
+    // Divide o script por ponto e vírgula para executar cada comando individualmente
+    // NOTA: Esta lógica é simples e assume que não há ";" dentro de strings ou comentários.
+    // Para scripts mais complexos, o ideal seria um parser de SQL real.
+    QStringList comandos = script.split(';', QString::SkipEmptyParts);
+    
+    if (!m_db.transaction()) {
+        qCritical() << "executarScriptSQL: Falha ao iniciar transacao.";
+        return false;
+    }
+
+    for (const QString &cmd : comandos) {
+        QString sql = cmd.trimmed();
+        if (sql.isEmpty()) continue;
+
+        QSqlQuery query;
+        if (!query.exec(sql)) {
+            qCritical() << "executarScriptSQL: Erro ao executar comando:" << query.lastError().text();
+            qCritical() << "SQL:" << sql;
+            m_db.rollback();
+            return false;
+        }
+    }
+
+    if (!m_db.commit()) {
+        qCritical() << "executarScriptSQL: Falha ao commitar transacao.";
+        return false;
+    }
+
+    qInfo() << "executarScriptSQL: Script" << caminho << "executado com sucesso!";
     return true;
 }

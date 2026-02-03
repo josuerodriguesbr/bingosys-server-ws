@@ -555,9 +555,6 @@ Vamos fazer assim, considere  ou seja já faça considerando isso, que o arquivo
  O que você acha?
 
 
-================================================================================
-Logue como Admin (admin / Bingo2026!@#).
-================================================================================
 
 
 =========================================================================================
@@ -592,3 +589,230 @@ Sobre as quinas diagonais, pode fazer assim, o sistema só terá quinas diagonai
 a grade for 5x5,  porque nos outros tipos de grade não dá pra formar quinas diagonais. 
 
 =========================================================================================
+
+
+=========================================================================================
+REGRA: PARA CHAMADA NAS PREMIAÇÕES QUINAS, FORMAS E CHEIA
+=========================================================================================
+
+Como deve er o controle de chamadas dos números.
+Em cada sorteio o sistema pode ter Um ou vários prêmios. Cada premiação é vinculado a uma forma
+única e específica, os tipos são: QUINAS, FORMAS e CHEIA.
+
+QUINAS: Uma premiação em quina deverá ser nomeada pelo Operador assim: Primeira Quina (Nome do Prêmio),
+Segunda Quina (Nome do Prêmio)... O sistema deve considerar a ordem das quinas de acordo como elas
+foram criadas, isso pode ser controlado pelo ID da premiação lá do banco de dados. Então se durante 
+a chamada ocorreu uma quina, o sistema deve verificr qual a quina de ID menor. IMPORTANTE: Por isso
+é necessário existir um FLAG na tabela de premiações para setar a premiação como realizada ou efetuada,
+isso vai requerer que alteremos o banco de dados, vamos incluir esse controle na tabela de 
+premiações. Precisamos marcar a premiação como efetuada, para que ela não participe mais da chamada
+que vai continuar o progreso.
+IMPORTANTE: Esse lance de travar a quina efetuada, vale também para os outros tipos de premiações
+como FORMAS e CHEIAS.
+IMPORTANTE: Pode ocorrer de uma  mesma premiação sair para mais de um Participante, isso é aceito sim.
+
+FORMAS: Segue as mesmas regras das quinas, depois que se forma uma forma numa cartela, esssa forma
+tem que ser travada e não participa maiss da continuidade da chamada de numeros.
+
+CHEIAS: Também segue as regras de Quinas e Formas. Inclusive depois que sair uma cheia é bem possível
+que a chamada deva parar, pois IMPORTANTE: A chamada só pode ser possível se existir premiações com 
+status de não efetuadas, na lista de premiações do sorteio em questão.
+
+IMPORTANTE: Se não foi incluido premiações no sorteio em questão a chamda nem deve começar. Se todas
+as premiações já foram efetuadas, e o Operador tentar chamar um número, ele deve ser avisado
+que não é possível chamar mais numeros porque não existe mais premiações.
+
+Vamos implementar esse controle na chamada?
+
+Atualmente a VPS está DESATIVADA, então vamos implementar e deixa para fazer testes somente quando a VPS
+estiver Ativa.
+
+Por enquanto vamos deixar tudo localmente, não vamos nem atualizar o repositório no github.
+
+Como a VPS está desativada, você cria um arquivo com o script das alterações que vamos precisar
+aplicar no bando de dados. Quando a VPS estiver Ativa nós aplicamos o script lá no banco de dados na VPS.
+
+=========================================================================================
+
+
+=========================================================================================
+Plano: Migração para Servidor Local (Notebook Linux
+=========================================================================================
+
+)
+Este plano descreve as etapas para transformar um notebook Linux na rede local em um servidor funcional para o BingoSys, substituindo temporariamente a VPS.
+
+User Review Required
+IMPORTANT
+
+Informações confirmadas:
+
+IP Local: 192.168.1.107
+Nome de usuário: josuerodrigues
+Distribuição Linux instalada (Ubuntu, Debian, etc.).
+Acesso SSH: Verifique se o serviço sshd está rodando e se a porta 22 está aberta.
+Proposed Changes
+1. Ambiente (Notebook)
+Instalação de pacotes necessários via sudo apt install:
+build-essential, cmake, qtbase5-dev, libqt5websockets5-dev
+postgresql, postgresql-contrib, libqt5sql5-psql
+2. Banco de Dados
+Configuração do pg_hba.conf para permitir conexões locais se necessário.
+Criação do banco bingosys e restauração do arquivo 
+data/schema.sql
+.
+3. Servidor C++
+Clonagem do repositório.
+Build do binário:
+mkdir build && cd build
+cmake ..
+make
+Execução do servidor com as novas credenciais do DB local.
+4. Frontend (Painel)
+Modificar no 
+panel.html
+ a URL do WebSocket para apontar para o novo IP local.
+Verification Plan
+Manual Verification
+Tentar conectar ao servidor via SSH a partir da máquina Windows.
+Validar que o servidor C++ consegue conectar ao PostgreSQL local.
+Abrir o 
+panel.html
+ no navegador da máquina Windows e conectar ao servidor no notebook.
+
+=========================================================================================
+
+
+=========================================================================================
+Walkthrough: Servidor Local (Notebook Linux)
+=========================================================================================
+
+Configuramos o notebook Linux como um servidor temporário funcional para o projeto BingoSys.
+
+Passos Realizados
+1. Preparação do Ambiente
+Dependências: Instalamos build-essential, cmake, qtbase5-dev, libqt5websockets5-dev e o driver de SQL do Postgres para Qt5.
+SSH: Configuramos acesso sem senha via chave pública para permitir automação.
+2. Banco de Dados Local
+Criamos o usuário e banco bingosys com senha bingosys.
+Restauramos o schema completo do projeto.
+3. Servidor C++
+O código foi sincronizado para ~/bingosys no notebook.
+Alteramos as credenciais de conexão no 
+BingoServer.cpp
+ para o ambiente local.
+Compilamos o binário com sucesso e o servidor já está rodando na porta 3000.
+4. Frontend
+O arquivo 
+frontend/js/socket.js
+ foi atualizado para que, ao ser aberto localmente (protocolo file:), ele conecte automaticamente no IP do notebook: 192.168.1.107:3000.
+Como Iniciar o Servidor (Caso seja reiniciado)
+Acesse o notebook por SSH ou terminal físico.
+Rode o comando:
+cd ~/bingosys && ./bin/BingoSysServer
+Como Acessar o Painel
+Basta abrir o arquivo 
+panel.html
+ no seu navegador na máquina Windows. Ele deve conectar automaticamente ao notebook.
+
+Status: Operacional 🚀 IP do Servidor: 192.168.1.107 Banco de Dados: Local (PostgreSQL)
+
+=========================================================================================
+
+
+=========================================================================================
+SSH Para acessar o notebookinux)
+=========================================================================================
+Vendo o ip do notebook: ip addr
+
+Configurando ssh
+mkdir -p ~/.ssh && echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDSn7pBVutv5iIQEUFLMgk2DeBCsNinsqxKFq+zSYEiTaLie842cQ1rbALOAMgr2V5clJ4fSAKyotEJdPJZClrYF7y3P2AKajw1PiiByigzfqVpJGYC2J7kIKD5yQr6Nm2u45PEnyDxFOVLj/bq14mQlTEIhqX/Skli8XFeZ7IT4jKDy0gl/PRILsWthlvMB22c7u2PsYnBK+hza4aY9koZEepoXBe5s8ivIz8HaTUqwHBSl0+z5B5gugf7teTk3Nsa+1HH7ju/fz7JqQ2rAZoPhbiWWybqpZLkGWvegj9vMwjxrKc5LkiuM8v0dYFF8cv7GnqiAa+2Xhn1muPQsuQ14XsNPoaVIgXTFTmif3V56ELpoZsW2f9Jn1MEMIBkUs5ELOxFAxn8sPgiO3/EUVjBHqt8nLAfQ4XtXSd5oEJQYZ9axgp/Y673LYYUZ/V7kg5A05M9SxuZ2yK1+xW/J1C8EAEQjx3GsKBj0V70fmMuTEZgjrIb21wAUaRVwJ5cbqT77mVL9oVSwo+g/BOj2gjJBSkO1H6BMkTHI/ju3GdG1zKtR5gQH95mls9GW1NaHx1aHNjRRNLAXIodnbTlg8fUqbH/Nq7pGCSs1giVy5PClwY5sF9WiY/TsisPkcdT3cBqt6zZ1eRIA8D4iy4NFU3R6MjPj80Wq/yige09QudDkQ== josuerodrigues@gmail.com" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
+
+Usuário notebook: josuerodriguesSenha notebook: lenovo112423
+=========================================================================================
+
+
+=========================================================================================
+SOBRE O Banco de dados no Notebook
+=========================================================================================
+
+O banco de dados utilizado é o **PostgreSQL**.
+
+### Credenciais de Acesso (Aplicação):
+*   **Host:** `localhost` (dentro do notebook) ou `192.168.1.107` (rede local)
+*   **Porta:** `5432`
+*   **Banco de Dados:** `bingosys`
+*   **Usuário:** `bingosys`
+*   **Senha:** `bingosys`
+
+### Acesso via Terminal (Dentro do Notebook):
+Para acessar o banco manualmente via SSH:
+```bash
+# Acesso rápido com o usuário do sistema
+PGPASSWORD=bingosys psql -h localhost -U bingosys -d bingosys
+
+# Acesso como Superusuário (Admin)
+sudo -u postgres psql -d bingosys
+```
+
+### Comandos Úteis:
+*   `\dt` : Lista todas as tabelas.
+*   `SELECT * FROM sorteios;` : Lista os sorteios criados.
+*   `SELECT * FROM chaves_acesso;` : Lista as chaves de acesso geradas.
+*   `GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bingosys;` : (Executado) Garante que o usuário do sistema consegue ler/escrever.
+
+=========================================================================================
+
+
+================================================================================
+Logue como Admin (admin / Bingo2026!@#).
+================================================================================
+
+
+
+================================================================================
+ACESSO AO NOTEBOOK
+================================================================================
+
+Entendido, Josué! Ótima ideia. Preparei um guia rápido chamado acesso_notebook.md com todas as informações que eu usei para me conectar e onde cada coisa está organizada.
+
+Se por acaso eu "esquecer" ou travar, basta você me enviar o conteúdo desse arquivo ou me lembrar: "Use as credenciais do arquivo de acesso ao notebook".
+
+Aqui está o resumo do que incluí:
+
+1. Acesso SSH
+IP: 192.168.1.107
+Usuário: josuerodrigues
+Senha: lenovo112423
+Comando: ssh josuerodrigues@192.168.1.107
+2. Banco de Dados (PostgreSQL Local)
+Host: localhost
+Banco: bingosys
+Usuário: bingosys
+Senha: bingosys
+Acesso Direto: PGPASSWORD=bingosys psql -h localhost -U bingosys -d bingosys
+3. Estrutura de Pastas (Notebook)
+O projeto está centralizado em ~/bingosys:
+
+src/: Código fonte C++ (onde a mágica acontece).
+bin/: O executável BingoSysServer (pronto para rodar).
+data/: Os arquivos .TXT das 11 bases e scripts SQL.
+build/: Arquivos temporários da compilação.
+frontend/: Interface web (HTML/JS/CSS).
+
+markdown
+# Guia de Acesso - Notebook BingoSys
+### SSH
+- IP: 192.168.1.107
+- User: josuerodrigues
+- Pass: lenovo112423
+### PostgreSQL
+- Host: localhost
+- DB: bingosys
+- User/Pass: bingosys / bingosys
+### Pasta do Projeto
+/home/josuerodrigues/bingosys
+Salvei essa documentação em um formato que posso ler facilmente depois. Qualquer dúvida sobre a estrutura do código, é só perguntar!
+================================================================================
+
+

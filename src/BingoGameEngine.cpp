@@ -80,8 +80,7 @@ bool BingoGameEngine::processNumber(int number)
             
             // 1. Verificação de Prêmios Customizados (Quinas, Formas, etc)
             for (auto &prize : m_prizes) {
-                if (!prize.active) continue;
-                // if (prize.winners.contains(ticketId)) continue; // Comentado para permitir debug melhor
+                if (!prize.active || prize.realizada) continue;
 
                 bool won = false;
                 bool nearWin = false; // "Boa"
@@ -156,8 +155,8 @@ bool BingoGameEngine::processNumber(int number)
                 // Atualiza listas de vencedores e 'boas'
                 if (won) {
                     if (!prize.winners.contains(ticketId)) {
+                        // Se houve vencedor em um prêmio já realizado (estranho, mas possível em bugs), aqui já pulamos acima.
                         prize.winners.append(ticketId);
-                        // Se ganhou, não está mais 'armada'
                         prize.near_winners.removeOne(ticketId);
                         hasUpdates = true;
                     }
@@ -202,44 +201,107 @@ int BingoGameEngine::undoLastNumber()
 
     int lastNum = m_drawnNumbers.takeLast();
 
-    // Itera sobre as cartelas ativas para desfazer o ponto
-    for (auto it = m_activeTickets.begin(); it != m_activeTickets.end(); ++it) {
-        TicketState &state = it.value();
+    // Otimização: Apenas cartelas que possuem este numero
+    const QList<int> &targets = m_numToTickets[lastNum];
 
-        // Verifica se esta cartela possui o numero que estamos cancelando
-        // Precisamos verificar na m_allTickets original se o numero existe naquela grade
-        // Mas podemos simplesmente ver se o numero NÃO está no state.missingNumbers
-        // E se ele faz parte da grade original. 
-        // Como o load de tickets é estático, podemos buscar na m_allTickets:
-        const QVector<int> &grid = m_allTickets[state.ticketId - 1].grids[m_currentGridIndex];
-        
-        if (grid.contains(lastNum)) {
-            // Se o numero estava na grade e não está no missing, significa que foi marcado
-            if (!state.missingNumbers.contains(lastNum)) {
-                state.missingNumbers.insert(lastNum);
-                int oldMatches = state.matches;
-                state.matches--;
-                
-                int newMissingCount = state.missingNumbers.size(); // que é matches_originais+1? nao, total-matches
-                
-                // Se ela era vencedora, remove de winners
-                if (oldMatches == state.totalNumbers) {
-                    m_winners.removeAll(state.ticketId);
+    for (int ticketId : targets) {
+        if (!m_activeTickets.contains(ticketId)) continue;
+        TicketState &state = m_activeTickets[ticketId];
+
+        // Se o numero estava marcado (não estava no missing)
+        if (!state.missingNumbers.contains(lastNum)) {
+            state.missingNumbers.insert(lastNum);
+            int oldMatches = state.matches;
+            state.matches--;
+            
+            int newMissingCount = state.missingNumbers.size();
+            
+            // 1. Desfazer BINGO Global (Cartela Cheia)
+            if (oldMatches == state.totalNumbers) {
+                m_winners.removeAll(ticketId);
+            }
+
+            if (newMissingCount == 1) {
+                m_nearWins[1].append(ticketId);
+            } else if (newMissingCount <= 3) {
+                m_nearWins[newMissingCount - 1].removeAll(ticketId);
+                if (!m_nearWins[newMissingCount].contains(ticketId))
+                    m_nearWins[newMissingCount].append(ticketId);
+            } else if (newMissingCount == 4) {
+                m_nearWins[3].removeAll(ticketId);
+            }
+
+            // 2. Desfazer impacto nos Prêmios Customizados
+            const auto &grid = m_allTickets[ticketId - 1].grids[m_currentGridIndex];
+            
+            for (int pIdx = 0; pIdx < m_prizes.size(); ++pIdx) {
+                Prize &prize = m_prizes[pIdx];
+                if (!prize.active) continue;
+
+                bool stillWon = false;
+                bool nearWin = false;
+                int minMissing = 99;
+
+                if (prize.tipo == "quina") {
+                    int cols = 5;
+                    int rows = grid.size() / cols;
+                    
+                    // Horizontal
+                    for (int r = 0; r < rows; ++r) {
+                        int rowMiss = 0;
+                        for (int c = 0; c < cols; ++c) {
+                            if (!m_drawnNumbers.contains(grid[r * cols + c])) rowMiss++;
+                        }
+                        if (rowMiss < minMissing) minMissing = rowMiss;
+                    }
+                    // Vertical
+                    if (minMissing > 0 && rows >= 5) {
+                        for (int c = 0; c < cols; ++c) {
+                            int colMiss = 0;
+                            for (int r = 0; r < rows; ++r) {
+                                if (!m_drawnNumbers.contains(grid[r * cols + c])) colMiss++;
+                            }
+                            if (colMiss < minMissing) minMissing = colMiss;
+                        }
+                    }
+                    // Diagonais
+                    if (minMissing > 0 && rows == 5 && cols == 5) {
+                        int d1 = 0, d2 = 0;
+                        for(int i=0; i<5; ++i) {
+                            if (!m_drawnNumbers.contains(grid[i*6])) d1++;
+                            if (!m_drawnNumbers.contains(grid[(i+1)*4])) d2++;
+                        }
+                        if (d1 < minMissing) minMissing = d1;
+                        if (d2 < minMissing) minMissing = d2;
+                    }
+                    
+                    if (minMissing == 0) stillWon = true;
+                    else if (minMissing == 1) nearWin = true;
+
+                } else if (prize.tipo == "forma" || prize.tipo == "cheia") {
+                    int prizeMissing = 0;
+                    if (prize.tipo == "cheia") {
+                        prizeMissing = state.missingNumbers.size();
+                    } else {
+                        if (prize.padraoIndices.isEmpty()) prizeMissing = 99;
+                        else {
+                            for (int idx : prize.padraoIndices) {
+                                if (idx >= 0 && idx < grid.size()) {
+                                    if (!m_drawnNumbers.contains(grid[idx])) prizeMissing++;
+                                }
+                            }
+                        }
+                    }
+                    if (prizeMissing == 0 && (prize.tipo == "cheia" || !prize.padraoIndices.isEmpty())) stillWon = true;
+                    else if (prizeMissing == 1) nearWin = true;
                 }
 
-                // Atualiza nearWins
-                // Se agora falta 1, ela veio do Winner.
-                // Se agora falta 2, ela veio do bucket 1.
-                // Se agora falta 3, ela veio do bucket 2.
-                // Se agora falta 4, ela sai do bucket 3.
-                
-                if (newMissingCount == 1) {
-                    m_nearWins[1].append(state.ticketId);
-                } else if (newMissingCount <= 3) {
-                    m_nearWins[newMissingCount - 1].removeAll(state.ticketId);
-                    m_nearWins[newMissingCount].append(state.ticketId);
-                } else if (newMissingCount == 4) {
-                    m_nearWins[3].removeAll(state.ticketId);
+                // Aplica mudanças no estado do prêmio
+                if (!stillWon) prize.winners.removeAll(ticketId);
+                if (nearWin && !stillWon) {
+                    if (!prize.near_winners.contains(ticketId)) prize.near_winners.append(ticketId);
+                } else {
+                    prize.near_winners.removeAll(ticketId);
                 }
             }
         }
@@ -338,4 +400,14 @@ void BingoGameEngine::addPrize(const Prize &prize)
 void BingoGameEngine::clearPrizes()
 {
     m_prizes.clear();
+}
+
+void BingoGameEngine::setPrizeStatus(int id, bool realizada)
+{
+    for(auto &p : m_prizes) {
+        if (p.id == id) {
+            p.realizada = realizada;
+            break;
+        }
+    }
 }

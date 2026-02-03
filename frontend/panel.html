@@ -1489,21 +1489,47 @@
             renderPrizeList();
         });
 
+        bingoSocket.on('draw_number_error', (data) => {
+            alert("⚠️ " + data.message);
+        });
+
+        bingoSocket.on('prize_status_updated', (data) => {
+            console.log("Status do prêmio atualizado:", data);
+        });
+
         function renderPrizeList() {
             const container = document.getElementById('prizes-list-container');
             if (!currentPrizes.length) {
                 container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Nenhum prêmio cadastrado.</div>';
                 return;
             }
-            container.innerHTML = currentPrizes.map(p => `
-                <div class="prize-item">
+            container.innerHTML = currentPrizes.map(p => {
+                const isRealizada = p.realizada;
+                return `
+                <div class="prize-item" style="${isRealizada ? 'opacity: 0.6; border-left: 4px solid var(--success);' : 'border-left: 4px solid var(--warning);'}">
                     <div class="prize-info">
-                        <span class="prize-name">${p.nome}</span>
+                        <span class="prize-name">${p.nome} ${isRealizada ? '✅' : ''}</span>
                         <span class="prize-type">${p.tipo}</span>
                     </div>
-                    <button onclick="deletePrize(${p.id})" style="background:var(--danger); border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">Remover</button>
+                    <div style="display:flex; gap:0.5rem;">
+                        ${session.isOperator ? `
+                            <button onclick="finalizePrize(${p.id}, ${!isRealizada})" 
+                                    style="background:${isRealizada ? 'var(--text-secondary)' : 'var(--success)'}; border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">
+                                ${isRealizada ? 'Reabrir' : 'Finalizar'}
+                            </button>
+                            <button onclick="deletePrize(${p.id})" style="background:var(--danger); border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">Remover</button>
+                        ` : ''}
+                    </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        function finalizePrize(prizeId, realizada) {
+            const acao = realizada ? "finalizar" : "reabrir";
+            if (confirm(`Deseja ${acao} este prêmio?`)) {
+                bingoSocket.send('finalize_prize', { prizeId, realizada });
+            }
         }
 
         function togglePrizeEditor(tipo) {

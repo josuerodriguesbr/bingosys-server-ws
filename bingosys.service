@@ -6,7 +6,8 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/var/www/bingosys
-ExecStart=/var/www/bingosys/bin/BingoSysServer 3000 /var/www/bingosys/data/base-cartelas.TXT
+ExecStart=/var/www/bingosys/bin/BingoSysServer 3000
+
 Restart=always
 RestartSec=5
 

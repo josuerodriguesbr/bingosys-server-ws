@@ -18,23 +18,29 @@ int main(int argc, char *argv[])
     }
 
     qInfo() << "Iniciando BingoSys Server na porta" << port << "...";
-
-    // --- CARGA DE CARTELAS MESTRE ---
-    QString dataPath = "data/base-cartelas.TXT"; 
-    if (argc > 2) dataPath = argv[2];
-
-    qInfo() << "Carregando base de cartelas:" << dataPath;
-    auto tickets = BingoTicketParser::parseFile(dataPath);
-    qInfo() << "Total de cartelas mestre:" << tickets.size();
-
-    if (tickets.isEmpty()) {
-        qCritical() << "ERRO: Nenhuma cartela carregada. Verifique o arquivo de dados.";
-        return 1;
+    
+    // Suporte a ferramenta de banco de dados nativa
+    if (a.arguments().contains("--exec-sql")) {
+        int idx = a.arguments().indexOf("--exec-sql");
+        if (a.arguments().size() > idx + 1) {
+            QString sqlPath = a.arguments().at(idx + 1);
+            BingoDatabaseManager db;
+            if (db.connectToDatabase("localhost", "bingosys", "bingosys", "bingosys")) {
+                qInfo() << "Executando script SQL local:" << sqlPath;
+                bool ok = db.executarScriptSQL(sqlPath);
+                return ok ? 0 : 1;
+            } else {
+                qCritical() << "Falha ao conectar ao banco remoto.";
+                return 1;
+            }
+        } else {
+            qCritical() << "Uso: BingoSysServer --exec-sql <caminho_do_arquivo.sql>";
+            return 1;
+        }
     }
 
     // Inicializa o servidor que agora gerencia DB e Sorteios
     BingoServer server(port);
-    server.loadTickets(tickets); // Cartelas usadas como base para todos os jogos
     
     if (!server.start()) {
         qCritical() << "Falha ao iniciar o servidor na porta" << port;

@@ -15,6 +15,7 @@ class BingoDatabaseManager : public QObject
 public:
     explicit BingoDatabaseManager(QObject *parent = nullptr);
     bool connectToDatabase(const QString &host, const QString &dbName, const QString &user, const QString &pass);
+    bool executarScriptSQL(const QString &caminho);
 
     // Chaves de Acesso
     QJsonObject validarChaveAcesso(const QString &chave);
@@ -46,6 +47,7 @@ public:
     QJsonArray getPremiacoes(int sorteioId);
     bool addPremiacao(int sorteioId, const QString &nome, const QString &tipo, const QJsonArray &padrao = QJsonArray(), int ordem = 0);
     bool removerPremiacao(int premioId);
+    bool atualizarStatusPremiacao(int premioId, bool realizada);
 
 private:
     QSqlDatabase m_db;

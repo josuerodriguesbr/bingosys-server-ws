@@ -25,7 +25,6 @@ public:
     ~BingoServer();
 
     bool start();
-    void loadTickets(const QVector<BingoTicket> &tickets);
 
 private Q_SLOTS:
     void onNewConnection();

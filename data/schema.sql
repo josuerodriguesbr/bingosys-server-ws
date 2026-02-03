@@ -62,7 +62,8 @@ CREATE TABLE PREMIACOES (
     nome_premio VARCHAR(255) NOT NULL,
     tipo VARCHAR(50), -- quina/forma/cheia
     padrao_grade JSONB,
-    ordem_exibicao INTEGER
+    ordem_exibicao INTEGER,
+    realizada boolean DEFAULT false
 );
 
 CREATE TABLE BOLAS_SORTEADAS (

@@ -342,9 +342,15 @@
         }
 
         function criarChaveImediata() {
+            // Seleciona o primeiro modelo e base disponíveis do cache
+            const modeloId = (modelosCache && modelosCache.length > 0) ? modelosCache[0].id : 1;
+            const baseId = (basesCache && basesCache.length > 0) ? basesCache[0].id : 1;
+
+            console.log("Criando chave com Modelo ID:", modeloId, "Base ID:", baseId);
+
             bingoSocket.send('criar_chave', {
-                modelo_id: 1,
-                base_id: 1
+                modelo_id: modeloId,
+                base_id: baseId
             });
         }
 

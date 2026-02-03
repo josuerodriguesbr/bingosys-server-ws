@@ -19,8 +19,8 @@ BingoServer::BingoServer(quint16 port, QObject *parent) :
     m_historyLimit(10)
 {
     // Conecta ao banco na inicialização (valores fixos conforme ambiente do usuário)
-    if (m_db->connectToDatabase("127.0.0.1", "sorteios-bingo", "postgres", "Bingo2026!@#")) {
-        qInfo() << "BingoServer: Inicializado com PostgreSQL.";
+    if (m_db->connectToDatabase("localhost", "bingosys", "bingosys", "bingosys")) {
+        qInfo() << "BingoServer: Inicializado com PostgreSQL Local.";
     }
 }
 
@@ -42,13 +42,6 @@ bool BingoServer::start()
     return false;
 }
 
-void BingoServer::loadTickets(const QVector<BingoTicket> &tickets)
-{
-    if (!tickets.isEmpty()) {
-        m_ticketCache.insert("data/base-cartelas.TXT", tickets);
-        qInfo() << "BingoServer: Base inicial (mestre) carregada no cache.";
-    }
-}
 
 BingoGameEngine* BingoServer::getEngine(int sorteioId)
 {
@@ -61,7 +54,10 @@ BingoGameEngine* BingoServer::getEngine(int sorteioId)
     if (sorteio.isEmpty()) return nullptr;
 
     QString dataPath = sorteio["caminho_dados"].toString();
-    if (dataPath.isEmpty()) dataPath = "data/base-cartelas.TXT"; // Falback
+    if (dataPath.isEmpty()) {
+        qCritical() << "BingoServer: Caminho de dados não definido para o sorteio" << sorteioId;
+        return nullptr;
+    }
 
     // Cache de Cartelas
     if (!m_ticketCache.contains(dataPath)) {
@@ -114,6 +110,7 @@ BingoGameEngine* BingoServer::getEngine(int sorteioId)
         p.nome = pObj["nome"].toString();
         p.tipo = pObj["tipo"].toString();
         p.active = true;
+        p.realizada = pObj["realizada"].toBool();
         
         QJsonArray padrao = pObj["padrao"].toArray();
         for (const QJsonValue &v : padrao) p.padraoIndices.insert(v.toInt());
@@ -394,15 +391,100 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     if (!engine) return;
 
     if (action == "draw_number" && session.isOperator) {
+        // Verifica se há prêmios pendentes
+        bool temPremioPendente = false;
+        auto prizes = engine->getPrizes();
+        for(const auto &p : prizes) {
+            if (p.active && !p.realizada) {
+                temPremioPendente = true;
+                break;
+            }
+        }
+
+        if (!temPremioPendente) {
+            // Tenta sincronizar prêmios do banco um última vez antes de falhar
+            qInfo() << "BingoServer: Nenhuma premiacao pendente no engine. Recarregando do banco para o sorteio" << session.sorteioId;
+            QJsonArray dbPrizes = m_db->getPremiacoes(session.sorteioId);
+            engine->clearPrizes();
+            for(int i = 0; i < dbPrizes.size(); ++i) {
+                QJsonObject pObj = dbPrizes[i].toObject();
+                Prize p;
+                p.id = pObj["id"].toInt();
+                p.nome = pObj["nome"].toString();
+                p.tipo = pObj["tipo"].toString();
+                p.active = true;
+                p.realizada = pObj["realizada"].toBool();
+                QJsonArray padrao = pObj["padrao"].toArray();
+                for (const QJsonValue &v : padrao) p.padraoIndices.insert(v.toInt());
+                engine->addPrize(p);
+                if (p.active && !p.realizada) temPremioPendente = true;
+            }
+        }
+
+        if (!temPremioPendente) {
+            QJsonObject error;
+            error["action"] = "draw_number_error";
+            error["message"] = "Não existem premiações ativas pendentes. Cadastre um prêmio ou marque o atual como pendente.";
+            sendJson(client, error);
+            return;
+        }
+
         int number = json["number"].toInt();
         engine->processNumber(number); 
         m_db->salvarBolaSorteada(session.sorteioId, number);
+        
+        // --- AUTOMAÇÃO: Verifica se algum prêmio foi ganho agora ---
+        prizes = engine->getPrizes();
+        QList<Prize*> winningPrizes;
+        
+        // Identifica prêmios que NÃO estavam realizados mas AGORA tem ganhadores
+        int lowestWinningId = -1;
+        
+        for(int i = 0; i < prizes.size(); ++i) {
+            if (prizes[i].active && !prizes[i].realizada && !prizes[i].winners.isEmpty()) {
+                if (lowestWinningId == -1 || prizes[i].id < lowestWinningId) {
+                    lowestWinningId = prizes[i].id;
+                }
+            }
+        }
+
+        if (lowestWinningId != -1) {
+            // Marca como realizada o prêmio de menor ID
+            m_db->atualizarStatusPremiacao(lowestWinningId, true);
+            engine->setPrizeStatus(lowestWinningId, true);
+            qInfo() << "BingoServer: Prêmio" << lowestWinningId << "marcado automaticamente como REALIZADO.";
+        }
         
         QJsonObject broadcast = getGameStatusJson(session.sorteioId);
         broadcast["action"] = "number_drawn";
         broadcast["number"] = number;
         
         broadcastToGame(session.sorteioId, broadcast);
+    }
+    else if (action == "finalize_prize" && session.isOperator) {
+        int prizeId = json["prizeId"].toInt();
+        bool realizada = json["realizada"].toBool(true);
+
+        if (m_db->atualizarStatusPremiacao(prizeId, realizada)) {
+             // Atualiza no motor vivo
+             auto prizes = engine->getPrizes();
+             engine->clearPrizes();
+             for(auto &p : prizes) {
+                 if (p.id == prizeId) p.realizada = realizada;
+                 engine->addPrize(p);
+             }
+
+             QJsonObject resp;
+             resp["action"] = "prize_status_updated";
+             resp["prizeId"] = prizeId;
+             resp["realizada"] = realizada;
+             broadcastToGame(session.sorteioId, resp);
+
+             // Envia um sync completo para garantir que todos vejam o status novo
+             QJsonObject sync = getGameStatusJson(session.sorteioId);
+             sync["action"] = "sync_status";
+             broadcastToGame(session.sorteioId, sync);
+        }
     }
     else if (action == "undo_last" && session.isOperator) {
         int num = engine->undoLastNumber();
@@ -646,7 +728,6 @@ void BingoServer::socketDisconnected()
 
 QJsonObject BingoServer::getTicketDetailsJson(int sorteioId, int ticketId)
 {
-    Q_UNUSED(sorteioId); // Por enquanto as cartelas sao globais m_masterTickets
     QJsonObject obj;
     BingoGameEngine *engine = getEngine(sorteioId);
     if (!engine) return obj;
@@ -702,6 +783,7 @@ QJsonObject BingoServer::getGameStatusJson(int sorteioId)
         po["id"] = p.id;
         po["nome"] = p.nome;
         po["tipo"] = p.tipo;
+        po["realizada"] = p.realizada;
         po["active"] = p.active;
         QJsonArray pWinners;
         for(int id : p.winners) pWinners.append(getTicketDetailsJson(sorteioId, id));
