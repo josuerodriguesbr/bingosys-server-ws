@@ -376,6 +376,8 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     ClientSession &session = m_sessions[client];
     qInfo() << "Açao de Jogo:" << action << "SorteioID:" << session.sorteioId << "IsOperator:" << session.isOperator;
 
+    // --- AÇÕES QUE NÃO EXIGEM MOTOR (ENGINE) CARREGADO ---
+    
     // Handler get_draw_config - usa session.sorteioId
     if (action == "get_draw_config") {
         QJsonObject resp;
@@ -387,8 +389,91 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         return;
     }
 
+    if (action == "get_prizes") {
+        QJsonObject resp;
+        resp["action"] = "prizes_list";
+        resp["prizes"] = m_db->getPremiacoes(session.sorteioId);
+        sendJson(client, resp);
+        return;
+    }
+
+    if (action == "get_my_tickets") {
+        QString telefone = json["telefone"].toString();
+        QList<int> ids = m_db->getCartelasPorTelefone(session.sorteioId, telefone);
+        
+        QJsonObject resp;
+        resp["action"] = "my_tickets_response";
+        QJsonArray ticketsArr;
+        for (int id : ids) {
+            ticketsArr.append(getTicketDetailsJson(session.sorteioId, id));
+        }
+        resp["tickets"] = ticketsArr;
+        sendJson(client, resp);
+        return;
+    }
+
+    if (action == "update_config" && session.isOperator) {
+        int modeloId = json["modelo_id"].toInt();
+        int baseId = json["base_id"].toInt();
+        QJsonObject prefs = json["preferencias"].toObject();
+
+        qInfo() << "[DEBUG] update_config recebido: sorteioId=" << session.sorteioId 
+                << "modeloId=" << modeloId << "baseId=" << baseId;
+
+        if (m_db->atualizarConfigSorteio(session.sorteioId, modeloId, baseId, prefs)) {
+            qInfo() << "[DEBUG] m_db->atualizarConfigSorteio retornou TRUE";
+            QJsonObject sorteio = m_db->getSorteio(session.sorteioId);
+            QString tipoG = sorteio["tipo_grade"].toString();
+            QString dataPath = sorteio["caminho_dados"].toString();
+
+            // Sincroniza o motor (engine) se ele já existir ou força criação se a base for válida agora
+            BingoGameEngine *engine = getEngine(session.sorteioId);
+            if (engine) {
+                // Se a base mudou, recarrega cartelas
+                if (!m_ticketCache.contains(dataPath)) {
+                    qInfo() << "BingoServer: Carregando nova base via update_config:" << dataPath;
+                    auto tickets = BingoTicketParser::parseFile(dataPath);
+                    if (!tickets.isEmpty()) m_ticketCache.insert(dataPath, tickets);
+                }
+                
+                if (m_ticketCache.contains(dataPath)) {
+                    const auto &activeTickets = m_ticketCache[dataPath];
+                    engine->loadTickets(activeTickets);
+                    
+                    int nNums = (tipoG.contains('x')) ? tipoG.split('x').last().toInt() : 15;
+                    int gridIdx = 0;
+                    if (!activeTickets.isEmpty()) {
+                        const auto &grids = activeTickets.first().grids;
+                        for (int i = 0; i < grids.size(); ++i) {
+                            if (grids[i].size() == nNums) { gridIdx = i; break; }
+                        }
+                    }
+                    engine->setGameMode(gridIdx);
+                    qInfo() << "BingoServer: Base do Sorteio" << session.sorteioId << "atualizada para" << dataPath << "Grade:" << gridIdx;
+                }
+            }
+
+            // Envia resposta de OK para o cliente que solicitou
+            QJsonObject resp;
+            resp["action"] = "config_updated";
+            resp["status"] = "ok";
+            resp["maxBalls"] = (tipoG.startsWith("90") ? 90 : 75); // Estimativa simples
+            sendJson(client, resp);
+
+            // Broadcast de sync para todos os participantes do sorteio (atualiza o modo visual)
+            QJsonObject sync = getGameStatusJson(session.sorteioId);
+            sync["action"] = "sync_status";
+            broadcastToGame(session.sorteioId, sync);
+        }
+        return;
+    }
+
+    // --- AÇÕES QUE EXIGEM MOTOR (ENGINE) CARREGADO ---
     BingoGameEngine *engine = getEngine(session.sorteioId);
-    if (!engine) return;
+    if (!engine) {
+        qWarning() << "BingoServer: Falha ao carregar motor para sorteio" << session.sorteioId << ". Verifique a base de dados.";
+        return;
+    }
 
     if (action == "draw_number" && session.isOperator) {
         // Verifica se há prêmios pendentes
@@ -422,10 +507,22 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         }
 
         if (!temPremioPendente) {
+            QString statusMsg = "Não existem premiações ativas pendentes.";
+            auto listP = engine->getPrizes();
+            if (listP.isEmpty()) {
+                statusMsg += " Nenhuma premiação foi cadastrada para este sorteio.";
+            } else {
+                statusMsg += " Prêmios atuais: ";
+                for(const auto &p : listP) {
+                    statusMsg += QString("[%1: %2] ").arg(p.nome).arg(p.realizada ? "REALIZADO" : "PENDENTE");
+                }
+            }
+            
             QJsonObject error;
             error["action"] = "draw_number_error";
-            error["message"] = "Não existem premiações ativas pendentes. Cadastre um prêmio ou marque o atual como pendente.";
+            error["message"] = statusMsg;
             sendJson(client, error);
+            qWarning() << "BingoServer: Bloqueio de sorteio para SorteioID" << session.sorteioId << "-" << statusMsg;
             return;
         }
 
@@ -438,21 +535,13 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         QList<Prize*> winningPrizes;
         
         // Identifica prêmios que NÃO estavam realizados mas AGORA tem ganhadores
-        int lowestWinningId = -1;
-        
         for(int i = 0; i < prizes.size(); ++i) {
             if (prizes[i].active && !prizes[i].realizada && !prizes[i].winners.isEmpty()) {
-                if (lowestWinningId == -1 || prizes[i].id < lowestWinningId) {
-                    lowestWinningId = prizes[i].id;
-                }
+                int pid = prizes[i].id;
+                m_db->atualizarStatusPremiacao(pid, true);
+                engine->setPrizeStatus(pid, true);
+                qInfo() << "BingoServer: Prêmio" << pid << "(" << prizes[i].nome << ") marcado automaticamente como REALIZADO.";
             }
-        }
-
-        if (lowestWinningId != -1) {
-            // Marca como realizada o prêmio de menor ID
-            m_db->atualizarStatusPremiacao(lowestWinningId, true);
-            engine->setPrizeStatus(lowestWinningId, true);
-            qInfo() << "BingoServer: Prêmio" << lowestWinningId << "marcado automaticamente como REALIZADO.";
         }
         
         QJsonObject broadcast = getGameStatusJson(session.sorteioId);
@@ -509,10 +598,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         broadcastToGame(session.sorteioId, sync);
     }
     else if (action == "get_prizes") {
-        QJsonObject resp;
-        resp["action"] = "prizes_list";
-        resp["prizes"] = m_db->getPremiacoes(session.sorteioId);
-        sendJson(client, resp);
+        // Já tratado acima
     }
     else if (action == "add_prize" && session.isOperator) {
         QString nome = json["nome"].toString();
@@ -646,62 +732,10 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         broadcastToGame(session.sorteioId, resp);
     }
     else if (action == "get_my_tickets") {
-        QString telefone = json["telefone"].toString();
-        QList<int> ids = m_db->getCartelasPorTelefone(session.sorteioId, telefone);
-        
-        QJsonObject resp;
-        resp["action"] = "my_tickets_response";
-        QJsonArray ticketsArr;
-        for (int id : ids) {
-            ticketsArr.append(getTicketDetailsJson(session.sorteioId, id));
-        }
-        resp["tickets"] = ticketsArr;
-        sendJson(client, resp);
+        // Já tratado acima
     }
     else if (action == "update_config" && session.isOperator) {
-        int modeloId = json["modelo_id"].toInt();
-        int baseId = json["base_id"].toInt();
-        QJsonObject prefs = json["preferencias"].toObject();
-
-        if (m_db->atualizarConfigSorteio(session.sorteioId, modeloId, baseId, prefs)) {
-            QJsonObject sorteio = m_db->getSorteio(session.sorteioId);
-            QString tipoG = sorteio["tipo_grade"].toString();
-            QString dataPath = sorteio["caminho_dados"].toString();
-
-            if (m_gameInstances.contains(session.sorteioId)) {
-                auto *engine = m_gameInstances[session.sorteioId].engine;
-                
-                // Se a base mudou, recarrega cartelas
-                if (!m_ticketCache.contains(dataPath)) {
-                    qInfo() << "BingoServer: Carregando nova base via update_config:" << dataPath;
-                    auto tickets = BingoTicketParser::parseFile(dataPath);
-                    if (!tickets.isEmpty()) m_ticketCache.insert(dataPath, tickets);
-                }
-                
-                if (m_ticketCache.contains(dataPath)) {
-                    const auto &activeTickets = m_ticketCache[dataPath];
-                    engine->loadTickets(activeTickets);
-                    
-                    int nNums = (tipoG.contains('x')) ? tipoG.split('x').last().toInt() : 15;
-                    int gridIdx = 0;
-                    if (!activeTickets.isEmpty()) {
-                        const auto &grids = activeTickets.first().grids;
-                        for (int i = 0; i < grids.size(); ++i) {
-                            if (grids[i].size() == nNums) { gridIdx = i; break; }
-                        }
-                    }
-                    engine->setGameMode(gridIdx);
-                    qInfo() << "BingoServer: Base do Sorteio" << session.sorteioId << "atualizada para" << dataPath << "Grade:" << gridIdx;
-                }
-            }
-
-            QJsonObject resp;
-            resp["action"] = "config_updated";
-            resp["status"] = "ok";
-            resp["sorteio_id"] = session.sorteioId;
-            resp["tipo_grade"] = tipoG;
-            broadcastToGame(session.sorteioId, resp);
-        }
+        // Já tratado acima
     }
     else if (action == "save_as_template") {
         QString nome = json["nome"].toString();
@@ -792,6 +826,10 @@ QJsonObject BingoServer::getGameStatusJson(int sorteioId)
         QJsonArray pNearWinners;
         for(int id : p.near_winners) pNearWinners.append(getTicketDetailsJson(sorteioId, id));
         po["near_winners"] = pNearWinners;
+
+        QJsonArray padraoArr;
+        for(int idx : p.padraoIndices) padraoArr.append(idx);
+        po["padrao"] = padraoArr;
 
         prizesArray.append(po);
     }

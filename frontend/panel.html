@@ -363,47 +363,84 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: -1rem -1rem 0.75rem -1rem;
-            /* Expand to edges */
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            font-weight: 700;
-            background: rgba(255, 255, 255, 0.05);
-            /* Default */
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .ticket-card.winner .ticket-header,
-        .ticket-card.winner-cheia .ticket-header {
-            background: var(--success);
-            color: #000;
-        }
-
-        .ticket-card.winner-quina .ticket-header {
-            background: #f59e0b;
-            color: #000;
-        }
-
-        .ticket-card.winner-forma .ticket-header {
-            background: #8b5cf6;
+            margin: -1rem -1rem 0.5rem -1rem;
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            font-weight: 800;
+            background: #1e293b;
             color: #fff;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Prize Table Layout (Q, F, C Columns) */
+        .prize-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 2px;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .prize-row {
+            display: grid;
+            grid-template-columns: 30px 30px 1fr 30px;
+            gap: 2px;
+            margin-bottom: 2px;
+            align-items: stretch;
+        }
+
+        .prize-cell {
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 2px;
+        }
+
+        /* Colors based on prize type */
+        .cell-type-q {
+            background: #f97316;
+            color: #000;
+        }
+
+        /* Orange */
+        .cell-type-f {
+            background: #facc15;
+            color: #000;
+        }
+
+        /* Yellow/Gold */
+        .cell-type-c {
+            background: #22c55e;
+            color: #000;
+        }
+
+        /* Green */
+
+        .prize-desc {
+            justify-content: flex-start;
+            text-align: left;
+            padding-left: 8px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .prize-count {
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.3);
         }
 
         /* Near headers */
         .ticket-card.near-1 .ticket-header,
         .ticket-card.near-cheia .ticket-header {
-            background: rgba(234, 179, 8, 0.2);
-            color: var(--warning);
-        }
-
-        .ticket-card.near-quina .ticket-header {
-            background: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-        }
-
-        .ticket-card.near-forma .ticket-header {
-            background: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
+            background: #854d0e;
+            color: #fff;
         }
 
 
@@ -462,6 +499,36 @@
 
             100% {
                 box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+            }
+        }
+
+        .bingo-cell.marked.cell-winner-cheia {
+            background: #22c55e !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        .bingo-cell.marked.cell-winner-forma {
+            background: #f59e0b !important;
+            color: #000 !important;
+            border-color: #000 !important;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+            font-weight: bold;
+        }
+
+        /* Responsive Winner List: Horizontal on Large Screens */
+        @media (min-width: 1400px) {
+            .main-grid {
+                grid-template-columns: 320px 1fr 2fr;
+                /* More space for winners */
+            }
+
+            #list-winners {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 1rem;
+                overflow-x: auto;
             }
         }
 
@@ -633,12 +700,11 @@
         .form-select {
             width: 100%;
             background: #0f172a;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 0.75rem;
             border-radius: var(--radius-md);
             color: white;
             font-size: 1rem;
-            appearance: none;
             cursor: pointer;
         }
 
@@ -787,6 +853,10 @@
                 <div id="playing-count"
                     style="margin-top: 0.5rem; color: var(--success); font-size: 0.9rem; font-weight: 600;">0 CARTELAS
                     EM JOGO</div>
+                <div id="draw-warning"
+                    style="display: none; margin-top: 1rem; padding: 0.75rem 1.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; border-radius: var(--radius-md); color: #fecaca; font-size: 0.85rem; text-align: center; max-width: 80%;">
+                    <!-- Warning message here -->
+                </div>
             </div>
 
             <!-- Admin Controls -->
@@ -1217,18 +1287,49 @@
             toShow.forEach(ticket => {
                 try {
                     const div = document.createElement('div');
-                    // Define classe baseada no tipo (quina, forma, cheia)
-                    // Se não tiver tipo (legado), assume cheia (winner)
-                    const typeClass = ticket.winType ? `winner-${ticket.winType}` : 'winner-cheia';
-                    const prizeLabel = ticket.prizeName ? ticket.prizeName.toUpperCase() : 'GANHOU!';
+                    // Unifica premiações da mesma cartela
+                    const prizes = ticket.allPrizes || [{
+                        type: ticket.winType || 'cheia',
+                        name: ticket.prizeName || 'GANHOU!',
+                        turn: ticket.turn || '1',
+                        winnersCount: ticket.winnersCount || 1
+                    }];
 
-                    div.className = `ticket-card ${typeClass}`;
+                    // Classe principal baseada no prêmio mais alto
+                    const hasCheia = prizes.some(p => p.type === 'cheia');
+                    const mainClass = hasCheia ? 'winner-cheia' : 'winner-other';
 
-                    let gridHtml = renderBingoGrid(ticket.numbers);
+                    div.className = `ticket-card ${mainClass}`;
+
+                    let prizeRowsHtml = "";
+                    prizes.forEach(p => {
+                        const typeCode = p.type === 'quina' ? 'Q' : (p.type === 'forma' ? 'F' : 'C');
+                        const typeClass = `cell-type-${p.type === 'quina' ? 'q' : (p.type === 'forma' ? 'f' : 'c')}`;
+                        const turn = p.type === 'forma' ? '*' : (p.turn || '1');
+
+                        prizeRowsHtml += `
+                            <div class="prize-row">
+                                <div class="prize-cell ${typeClass}">${typeCode}</div>
+                                <div class="prize-cell">${turn}</div>
+                                <div class="prize-cell prize-desc">${p.name}</div>
+                                <div class="prize-cell prize-count">${p.winnersCount || '1'}</div>
+                            </div>
+                        `;
+                    });
+
+                    // Coleta todos os índices de padrões (forma) ganhos nesta cartela
+                    const winningPatterns = prizes
+                        .filter(p => p.type === 'forma' && p.padrao)
+                        .reduce((acc, p) => acc.concat(p.padrao), []);
+
+                    let gridHtml = renderBingoGrid(ticket.numbers, hasCheia, winningPatterns);
                     div.innerHTML = `
                         <div class="ticket-header">
-                            <span>🏆 #${ticket.barcode}</span>
-                            <span style="font-size:0.8em">${prizeLabel}</span>
+                            <span>🏷️ #${ticket.barcode}</span>
+                            <span style="font-size:0.7em; opacity:0.8">GANHADOR!</span>
+                        </div>
+                        <div class="prize-table">
+                            ${prizeRowsHtml}
                         </div>
                         ${gridHtml}
                     `;
@@ -1238,30 +1339,40 @@
         }
 
         function aggregateWinners(data) {
-            let all = [];
-            // 1. Bingo Cheio (padrão 'winners')
+            let map = new Map();
+
+            // Função auxiliar para agrupar
+            const add = (ticket, prizeInfo) => {
+                if (!map.has(ticket.ticketId)) {
+                    map.set(ticket.ticketId, { ...ticket, allPrizes: [] });
+                }
+                map.get(ticket.ticketId).allPrizes.push(prizeInfo);
+            };
+
+            // 1. Bingo Cheio
             if (data.winners && Array.isArray(data.winners)) {
                 data.winners.forEach(w => {
-                    let o = { ...w };
-                    o.winType = 'cheia';
-                    o.prizeName = 'BINGO!';
-                    all.push(o);
+                    add(w, { type: 'cheia', name: 'BINGO!', turn: '1', winnersCount: data.winners.length });
                 });
             }
+
             // 2. Prêmios Customizados
             if (data.prizes && Array.isArray(data.prizes)) {
                 data.prizes.forEach(p => {
                     if (p.winners && Array.isArray(p.winners)) {
                         p.winners.forEach(w => {
-                            let o = { ...w };
-                            o.winType = p.tipo; // quina, forma
-                            o.prizeName = p.nome;
-                            all.push(o);
+                            add(w, {
+                                type: p.tipo,
+                                name: p.nome,
+                                turn: '1',
+                                winnersCount: p.winners.length,
+                                padrao: p.padrao // Inclui o padrão para destaque visual
+                            });
                         });
                     }
                 });
             }
-            return all;
+            return Array.from(map.values());
         }
 
         function aggregateNearWins(data) {
@@ -1342,7 +1453,7 @@
             });
         }
 
-        function renderBingoGrid(numbers) {
+        function renderBingoGrid(numbers, isFullWinner = false, winningPatterns = []) {
             if (!numbers || numbers.length === 0) return "";
 
             const rows = numbers.length / 5;
@@ -1354,14 +1465,20 @@
                     <div class="bingo-grid" style="grid-template-rows: repeat(${rows}, 1fr)">
             `;
 
-            // Preenchimento coluna-primeiro (B-I-N-G-O)
-            // Para cada linha r, visitamos cada coluna c
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < 5; c++) {
                     const idx = (c * rows) + r;
                     const val = numbers[idx];
                     const isMarked = drawnNumbers.includes(val);
-                    html += `<div class="bingo-cell ${isMarked ? 'marked' : ''}">${val.toString().padStart(2, '0')}</div>`;
+
+                    let cellClass = isMarked ? 'marked' : '';
+                    if (isFullWinner && isMarked) {
+                        cellClass += ' cell-winner-cheia';
+                    } else if (winningPatterns.includes(idx) && isMarked) {
+                        cellClass += ' cell-winner-forma';
+                    }
+
+                    html += `<div class="bingo-cell ${cellClass}">${val.toString().padStart(2, '0')}</div>`;
                 }
             }
             html += `</div></div>`;
@@ -1405,10 +1522,20 @@
             basesCache = data.bases || [];
 
             if (modelSelect) modelSelect.innerHTML = modelosCache.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-            if (baseSelect) baseSelect.innerHTML = basesCache.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+            if (baseSelect) {
+                baseSelect.innerHTML = basesCache.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+                console.log("Select Base preenchido com", basesCache.length, "itens. Tentando selecionar ID:", d.base_id);
+                baseSelect.value = d.base_id;
+
+                // Fallback caso não selecione (ex: tipagem String vs Int)
+                if (baseSelect.value == "" && d.base_id) {
+                    Array.from(baseSelect.options).forEach(opt => {
+                        if (opt.value == d.base_id) baseSelect.value = opt.value;
+                    });
+                }
+            }
 
             if (modelSelect) modelSelect.value = d.modelo_id;
-            if (baseSelect) baseSelect.value = d.base_id;
 
             // Atualiza tipo_grade no config global
             if (d && d.tipo_grade) {
@@ -1457,6 +1584,8 @@
             const numChances = parseInt(document.getElementById('cfg-chances').value);
             const historyLimit = parseInt(document.getElementById('cfg-history-limit').value);
 
+            console.log("[DEBUG] Salvando Preferências:", { modeloId, baseId, numChances, historyLimit });
+
             bingoSocket.send("update_config", {
                 modelo_id: modeloId,
                 base_id: baseId,
@@ -1490,7 +1619,14 @@
         });
 
         bingoSocket.on('draw_number_error', (data) => {
-            alert("⚠️ " + data.message);
+            const elWarning = document.getElementById('draw-warning');
+            if (elWarning) {
+                elWarning.style.display = 'block';
+                elWarning.innerHTML = `⚠️ <b>Bloqueio:</b> ${data.message}`;
+                // Esconde após 8 segundos
+                setTimeout(() => { elWarning.style.display = 'none'; }, 8000);
+            }
+            console.error("Erro de sorteio:", data.message);
         });
 
         bingoSocket.on('prize_status_updated', (data) => {
