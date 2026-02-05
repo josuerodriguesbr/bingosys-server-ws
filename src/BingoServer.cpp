@@ -597,8 +597,11 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         sync["action"] = "sync_status";
         broadcastToGame(session.sorteioId, sync);
     }
-    else if (action == "get_prizes") {
-        // Já tratado acima
+    else if (action == "get_server_debug") {
+        QJsonObject resp = engine->getDebugReport();
+        resp["action"] = "server_debug_report";
+        sendJson(client, resp);
+        qInfo() << "BingoServer: Relatório de depuração solicitado pelo cliente. Enviado.";
     }
     else if (action == "add_prize" && session.isOperator) {
         QString nome = json["nome"].toString();
@@ -607,13 +610,21 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         int ordem = json["ordem"].toInt();
         
         if (m_db->addPremiacao(session.sorteioId, nome, tipo, padrao, ordem)) {
-            // Recarrega o motor para refletir a mudança (ou apenas adiciona ao motor vivo)
-            Prize p;
-            p.nome = nome;
-            p.tipo = tipo;
-            p.active = true;
-            for(const QJsonValue &v : padrao) p.padraoIndices.insert(v.toInt());
-            engine->addPrize(p);
+            // Sincroniza o motor com o banco (recarrega tudo para garantir IDs corretos)
+            engine->clearPrizes();
+            QJsonArray dbPrizes = m_db->getPremiacoes(session.sorteioId);
+            for(int i=0; i<dbPrizes.size(); ++i) {
+                QJsonObject po = dbPrizes[i].toObject();
+                Prize p;
+                p.id = po["id"].toInt();
+                p.nome = po["nome"].toString();
+                p.tipo = po["tipo"].toString();
+                p.active = true;
+                p.realizada = po["realizada"].toBool();
+                QJsonArray pPadrao = po["padrao"].toArray();
+                for (const QJsonValue &v : pPadrao) p.padraoIndices.insert(v.toInt());
+                engine->addPrize(p);
+            }
 
             QJsonObject resp;
             resp["action"] = "prize_added";
@@ -820,7 +831,16 @@ QJsonObject BingoServer::getGameStatusJson(int sorteioId)
         po["realizada"] = p.realizada;
         po["active"] = p.active;
         QJsonArray pWinners;
-        for(int id : p.winners) pWinners.append(getTicketDetailsJson(sorteioId, id));
+        for(int id : p.winners) {
+            QJsonObject winObj = getTicketDetailsJson(sorteioId, id);
+            // Se houver um padrão específico para este ganhador (ex: quina dinâmica), envia
+            if (p.winnerPatterns.contains(id)) {
+                QJsonArray dynPadrao;
+                for(int idx : p.winnerPatterns[id]) dynPadrao.append(idx);
+                winObj["padrao"] = dynPadrao;
+            }
+            pWinners.append(winObj);
+        }
         po["winners"] = pWinners;
 
         QJsonArray pNearWinners;

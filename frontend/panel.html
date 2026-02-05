@@ -304,8 +304,13 @@
             padding: 1rem;
             margin-bottom: 1rem;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            /* Mudado de hidden para visible */
             transition: all 0.3s;
+            height: auto !important;
+            /* Força altura automática */
+            flex: none !important;
+            /* Impede que o flex estique ou comprima o card */
         }
 
         .ticket-card.winner {
@@ -510,11 +515,25 @@
         }
 
         .bingo-cell.marked.cell-winner-forma {
-            background: #f59e0b !important;
+            background: #facc15 !important;
+            /* Amarelo/Ouro para Formas */
             color: #000 !important;
             border-color: #000 !important;
-            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+            box-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
             font-weight: bold;
+        }
+
+        .bingo-cell.marked.cell-winner-quina {
+            background: #f97316 !important;
+            /* Laranja para Quinas */
+            color: #fff !important;
+            border-color: #fff !important;
+            border-radius: 50% !important;
+            /* Círculo */
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.6);
+            font-weight: 900;
+            transform: scale(1.1);
+            z-index: 2;
         }
 
         /* Responsive Winner List: Horizontal on Large Screens */
@@ -528,7 +547,10 @@
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
                 gap: 1rem;
-                overflow-x: auto;
+                overflow-y: auto;
+                /* Scroll vertical se necessário */
+                align-items: start;
+                /* Alinha cards no topo, permitindo alturas diferentes */
             }
         }
 
@@ -1071,6 +1093,33 @@
             checkParticipantMode();
         });
 
+        bingoSocket.on('server_debug_report', (data) => {
+            console.group("🚀 RELATÓRIO DE DEPURAÇÃO DO SERVIDOR");
+            console.table(data.prizes.map(p => ({
+                ID: p.id,
+                Nome: p.nome,
+                Tipo: p.tipo,
+                Ativo: p.active,
+                Realizado: p.realizada,
+                "Na Vez?": p.isTurnPrize ? "SIM" : "não",
+                Ganhadores: p.winnersCount
+            })));
+            console.log("Estado Geral:", {
+                BolasSorteada: data.drawnCount,
+                CartelasAtivas: data.activeTicketsCount,
+                IndexGrade: data.gridIndex
+            });
+            console.groupEnd();
+            alert("Relatório de depuração gerado no console do navegador (F12)!");
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                console.log("Solicitando relatório de depuração...");
+                bingoSocket.send('get_server_debug', {});
+            }
+        });
+
         bingoSocket.on('my_tickets_response', (data) => {
             myTickets = data.tickets || [];
             renderMyTickets();
@@ -1276,13 +1325,7 @@
             elListWinners.innerHTML = "";
             let toShow = [...lastWinners];
 
-            if (toShow.length > 3 && !showAllWinners) {
-                elMoreWinners.style.display = 'block';
-                elMoreWinners.textContent = `+ ${toShow.length - 3} ganhadores`;
-                toShow = toShow.slice(0, 3);
-            } else {
-                elMoreWinners.style.display = 'none';
-            }
+            elMoreWinners.style.display = 'none';
 
             toShow.forEach(ticket => {
                 try {
@@ -1317,12 +1360,16 @@
                         `;
                     });
 
-                    // Coleta todos os índices de padrões (forma) ganhos nesta cartela
-                    const winningPatterns = prizes
+                    // Coleta todos os índices de padrões (forma e quina) ganhos nesta cartela
+                    const formaPatterns = prizes
                         .filter(p => p.type === 'forma' && p.padrao)
                         .reduce((acc, p) => acc.concat(p.padrao), []);
 
-                    let gridHtml = renderBingoGrid(ticket.numbers, hasCheia, winningPatterns);
+                    const quinaPatterns = prizes
+                        .filter(p => p.type === 'quina' && p.padrao)
+                        .reduce((acc, p) => acc.concat(p.padrao), []);
+
+                    let gridHtml = renderBingoGrid(ticket.numbers, hasCheia, formaPatterns, quinaPatterns);
                     div.innerHTML = `
                         <div class="ticket-header">
                             <span>🏷️ #${ticket.barcode}</span>
@@ -1349,14 +1396,7 @@
                 map.get(ticket.ticketId).allPrizes.push(prizeInfo);
             };
 
-            // 1. Bingo Cheio
-            if (data.winners && Array.isArray(data.winners)) {
-                data.winners.forEach(w => {
-                    add(w, { type: 'cheia', name: 'BINGO!', turn: '1', winnersCount: data.winners.length });
-                });
-            }
-
-            // 2. Prêmios Customizados
+            // 2. Prêmios Customizados (Unificada - Quinas, Formas e Cheias via Turno Global)
             if (data.prizes && Array.isArray(data.prizes)) {
                 data.prizes.forEach(p => {
                     if (p.winners && Array.isArray(p.winners)) {
@@ -1366,7 +1406,7 @@
                                 name: p.nome,
                                 turn: '1',
                                 winnersCount: p.winners.length,
-                                padrao: p.padrao // Inclui o padrão para destaque visual
+                                padrao: w.padrao || p.padrao // Tenta o padrão da cartela (quina) ou prêmio (forma)
                             });
                         });
                     }
@@ -1453,7 +1493,7 @@
             });
         }
 
-        function renderBingoGrid(numbers, isFullWinner = false, winningPatterns = []) {
+        function renderBingoGrid(numbers, isFullWinner = false, formaPatterns = [], quinaPatterns = []) {
             if (!numbers || numbers.length === 0) return "";
 
             const rows = numbers.length / 5;
@@ -1474,7 +1514,9 @@
                     let cellClass = isMarked ? 'marked' : '';
                     if (isFullWinner && isMarked) {
                         cellClass += ' cell-winner-cheia';
-                    } else if (winningPatterns.includes(idx) && isMarked) {
+                    } else if (quinaPatterns.includes(idx) && isMarked) {
+                        cellClass += ' cell-winner-quina';
+                    } else if (formaPatterns.includes(idx) && isMarked) {
                         cellClass += ' cell-winner-forma';
                     }
 
@@ -1700,12 +1742,17 @@
 
             const totalCells = cols * rows;
             for (let i = 0; i < totalCells; i++) {
+                const r = Math.floor(i / cols);
+                const c = i % cols;
+                const columnMajorIdx = (c * rows) + r;
+
                 const cell = document.createElement('div');
                 cell.className = 'shape-cell';
-                if (shapeIndices.has(i)) cell.classList.add('active');
+                if (shapeIndices.has(columnMajorIdx)) cell.classList.add('active');
+
                 cell.onclick = () => {
-                    if (shapeIndices.has(i)) shapeIndices.delete(i);
-                    else shapeIndices.add(i);
+                    if (shapeIndices.has(columnMajorIdx)) shapeIndices.delete(columnMajorIdx);
+                    else shapeIndices.add(columnMajorIdx);
                     cell.classList.toggle('active');
                 };
                 gridEl.appendChild(cell);
@@ -1728,9 +1775,9 @@
                 nome, tipo, padrao, ordem: currentPrizes.length + 1
             });
 
-            // Limpa form
+            // Limpa form e reset gráfico
             document.getElementById('prz-nome').value = '';
-            shapeIndices.clear();
+            clearShapeGrid(); // Limpa visualmente a grade e os índices internos
             alert("Prêmio adicionado com sucesso!");
             bingoSocket.send('get_prizes');
         }

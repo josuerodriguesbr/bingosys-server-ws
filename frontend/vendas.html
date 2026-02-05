@@ -233,7 +233,7 @@
                         IMPORTAR</button>
                     <button onclick="openBatchModal()"
                         style="background: var(--accent-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white; margin-right: 0.5rem;">+
-                        100 TESTE</button>
+                        VENDER LOTE</button>
                     <button onclick="clearSales()" class="btn-clear"
                         style="background: var(--danger); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; color: white;">LIMPAR
                         TUDO</button>
@@ -248,10 +248,15 @@
     <!-- Modal Lote Teste -->
     <div id="modal-batch" class="modal">
         <div class="modal-content">
-            <div class="modal-header">Vender 100 Cartelas de Teste</div>
+            <div class="modal-header">Venda de Cartelas em Lote</div>
             <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem;">Quantidade de
+                    Cartelas</label>
+                <input type="number" id="batch-qty" value="100" min="1" max="10000"
+                    style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; text-align: center; font-size: 1.2rem; margin-bottom: 1rem;">
+
                 <label style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem;">Telefone do
-                    Participante</label>
+                    Participante (Opcional)</label>
                 <input type="tel" id="batch-phone" placeholder="(00) 00000-0000"
                     style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; text-align: center; font-size: 1.2rem;">
             </div>
@@ -260,7 +265,7 @@
                     style="background: none; border: 1px solid #475569; color: #94a3b8; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">CANCELAR</button>
                 <button onclick="confirmBatch()"
                     style="background: var(--accent-primary); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600;">CONFIRMAR
-                    +100</button>
+                    VENDA</button>
             </div>
         </div>
     </div>
@@ -375,21 +380,26 @@
             }
         }
 
-        // Batch Test Functions
         function openBatchModal() {
             document.getElementById('modal-batch').style.display = 'flex';
-            document.getElementById('batch-phone').focus();
+            document.getElementById('batch-qty').focus();
         }
         function closeBatchModal() {
             document.getElementById('modal-batch').style.display = 'none';
         }
         function confirmBatch() {
+            const qty = parseInt(document.getElementById('batch-qty').value);
             const tel = document.getElementById('batch-phone').value.trim();
+
+            if (isNaN(qty) || qty < 1) {
+                alert("Por favor, informe uma quantidade válida.");
+                return;
+            }
             if (!tel) {
                 alert("Por favor, informe um telefone para as cartelas de teste.");
                 return;
             }
-            bingoSocket.send("register_random", { count: 100, telefone: tel });
+            bingoSocket.send("register_random", { count: qty, telefone: tel });
             closeBatchModal();
         }
 

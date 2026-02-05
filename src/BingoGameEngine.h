@@ -12,6 +12,8 @@ struct TicketState {
     int matches; // Quantidade de acertos na grade atual
     QSet<int> missingNumbers; // Numeros que faltam (para fechar a grade atual)
     int totalNumbers;
+    QSet<int> wonPrizeIds; // IDs dos prêmios já ganhos por esta cartela
+    QMap<QString, QList<QList<int>>> usedPatterns; // Tipo de prêmio -> Lista de índices que já geraram prêmio
 };
 
 struct Prize {
@@ -21,6 +23,7 @@ struct Prize {
     QSet<int> padraoIndices; // Índices (0-24) que compõem o padrão
     QList<int> winners;
     QList<int> near_winners;
+    QMap<int, QList<int>> winnerPatterns; // TicketID -> Lista de Índices que formaram a vitória
     bool active;
     bool realizada;
 };
@@ -78,6 +81,7 @@ public:
     QList<int> getDrawnNumbers() const;
     QList<int> getWinners() const; // IDs das cartelas ganhadoras (BINGO/Cheia)
     QMap<int, QList<int>> getNearWinTickets() const; // Map: Falta 1 -> [IDs], Falta 2 -> [IDs]...
+    QJsonObject getDebugReport() const;
 
 private:
     QVector<BingoTicket> m_allTickets; // Todas as cartelas carregadas
