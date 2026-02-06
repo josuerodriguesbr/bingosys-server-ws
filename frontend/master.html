@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingoSys - Master Access</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+        }
+
+        .login-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #6366f1, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            color: #ef4444;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <div class="logo">BINGOSYS MASTER</div>
+
+        <div id="secao-admin" class="form-section">
+            <div class="input-group">
+                <label>Usuário Mestre</label>
+                <input type="text" id="admin-user" placeholder="admin" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="admin-pass" placeholder="••••••••">
+            </div>
+            <button id="btn-login-admin">ENTRAR NO PAINEL MESTRE</button>
+        </div>
+
+        <div id="error-msg" class="error-msg">Credenciais inválidas.</div>
+    </div>
+
+    <script src="js/socket.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        const btnLoginAdmin = document.getElementById('btn-login-admin');
+        const inputUsuario = document.getElementById('admin-user');
+        const inputSenha = document.getElementById('admin-pass');
+        const msgErro = document.getElementById('error-msg');
+
+        btnLoginAdmin.onclick = () => {
+            const usuario = inputUsuario.value.trim();
+            const senha = inputSenha.value;
+            if (!usuario || !senha) return;
+            
+            btnLoginAdmin.disabled = true;
+            msgErro.style.display = 'none';
+            
+            bingoSocket.on('connected', () => {
+                bingoSocket.send('login_admin', { usuario, senha });
+            });
+            
+            // Se já estiver conectado, envia direto
+            if (bingoSocket.isConnected) {
+                bingoSocket.send('login_admin', { usuario, senha });
+            }
+        };
+
+        bingoSocket.on('login_success', (data) => {
+            if (data.is_master) {
+                BingoAuth.saveSession(data.token, true, 0, true);
+                window.location.href = 'admin_tenants.html';
+            } else {
+                msgErro.innerText = "Acesso negado: Esta conta não tem privilégios de administrador.";
+                msgErro.style.display = 'block';
+                btnLoginAdmin.disabled = false;
+            }
+        });
+
+        bingoSocket.on('login_error', (data) => {
+            btnLoginAdmin.disabled = false;
+            msgErro.innerText = data.message || "Erro de autenticação.";
+            msgErro.style.display = 'block';
+        });
+
+        inputSenha.onkeyup = (e) => { if (e.key === 'Enter') btnLoginAdmin.onclick(); };
+        inputUsuario.onkeyup = (e) => { if (e.key === 'Enter') btnLoginAdmin.onclick(); };
+    </script>
+</body>
+
+</html>

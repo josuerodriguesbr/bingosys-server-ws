@@ -212,6 +212,7 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
             int sid = res["sorteio_id"].toInt();
             ClientSession session;
             session.sorteioId = sid;
+            session.chaveId = res["id"].toInt();
             session.accessKey = chave;
             session.isOperator = (res["status"].toString() == "ativa"); // Chave valida = operador
             m_sessions[client] = session;
@@ -476,6 +477,18 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
     }
 
     if (action == "draw_number" && session.isOperator) {
+        // REGRA CRÍTICA: Se o sorteio já terminou, não permite novos números de jeito nenhum.
+        // Isso evita que números "fantasmas" entrem no cache e corrompam o 'Desfazer'.
+        QJsonObject currentStatus = getGameStatusJson(session.sorteioId);
+        if (currentStatus["isFinished"].toBool()) {
+             QJsonObject error;
+             error["action"] = "draw_number_error";
+             error["message"] = "Sorteio já concluído. Não é possível inserir mais números.";
+             sendJson(client, error);
+             qWarning() << "[SECURITY] Tentativa de draw_number em sorteio concluído. SorteioID:" << session.sorteioId;
+             return;
+        }
+
         // Verifica se há prêmios pendentes
         bool temPremioPendente = false;
         auto prizes = engine->getPrizes();
@@ -549,6 +562,12 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         broadcast["number"] = number;
         
         broadcastToGame(session.sorteioId, broadcast);
+
+        // Se o sorteio terminou, bloqueia a chave que iniciou o processo (se for operador)
+        if (broadcast["isFinished"].toBool() && session.isOperator && session.chaveId > 0) {
+            m_db->bloquearChave(session.chaveId);
+            qInfo() << "[SECURITY] Sorteio" << session.sorteioId << "concluído. Chave" << session.chaveId << "inativada.";
+        }
     }
     else if (action == "finalize_prize" && session.isOperator) {
         int prizeId = json["prizeId"].toInt();
@@ -563,29 +582,114 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
                  engine->addPrize(p);
              }
 
+             QJsonObject sync = getGameStatusJson(session.sorteioId);
+             
              QJsonObject resp;
              resp["action"] = "prize_status_updated";
              resp["prizeId"] = prizeId;
              resp["realizada"] = realizada;
+             resp["isFinished"] = sync["isFinished"]; // Redundância de segurança
              broadcastToGame(session.sorteioId, resp);
 
-             // Envia um sync completo para garantir que todos vejam o status novo
-             QJsonObject sync = getGameStatusJson(session.sorteioId);
              sync["action"] = "sync_status";
              broadcastToGame(session.sorteioId, sync);
+
+             // REGRA DE SEGURANÇA: Bloqueio/Reativação de Chave
+             bool isFinished = sync["isFinished"].toBool();
+             if (session.isOperator && session.chaveId > 0) {
+                 if (isFinished) {
+                     m_db->bloquearChave(session.chaveId);
+                     qInfo() << "[SECURITY] Sorteio" << session.sorteioId << "concluído (manual). Chave" << session.chaveId << "inativada.";
+                 } else if (!realizada) {
+                     // Se reabriu um prêmio, garante que a chave volte a ser ATIVA
+                     m_db->reativarChave(session.chaveId);
+                     qInfo() << "[SECURITY] Sorteio" << session.sorteioId << "REABERTO (manual). Chave" << session.chaveId << "reativada.";
+                 }
+             }
         }
     }
     else if (action == "undo_last" && session.isOperator) {
         int num = engine->undoLastNumber();
         if (num != -1) {
-            m_db->removerUltimaBola(session.sorteioId, num);
-            QJsonObject broadcast = getGameStatusJson(session.sorteioId);
-            broadcast["action"] = "number_cancelled";
-            broadcast["number"] = num;
-            broadcastToGame(session.sorteioId, broadcast);
+            bool dbOk = m_db->removerUltimaBola(session.sorteioId, num);
+            qInfo() << "[UNDO] Bola" << num << "removida. DB status:" << dbOk;
+            
+            // RE-AVALIAÇÃO TOTAL E AGRESSIVA:
+            // Sincronizamos o status de TODOS os prêmios. 
+            // Se o motor diz que um prêmio NÃO tem ganhadores, ele NÃO pode estar 'realizado'.
+            auto prizes = engine->getPrizes();
+            int reabertos = 0;
+            QString reabertosNomes;
+
+            for(const auto &p : prizes) {
+                // Se o prêmio está marcado como realizado mas o motor não tem ganhadores para ele
+                // OU se o prêmio é do tipo 'cheia' e acabamos de desfazer uma bola (desconfiança total)
+                if (p.realizada && p.winners.isEmpty()) {
+                    m_db->atualizarStatusPremiacao(p.id, false);
+                    engine->setPrizeStatus(p.id, false);
+                    reabertos++;
+                    reabertosNomes += p.nome + " ";
+                }
+            }
+
+            if (reabertos > 0) {
+                qInfo() << "[UNDO-REOPEN] Sorteio" << session.sorteioId << ". Prêmios reabertos automaticamente:" << reabertosNomes;
+            }
+
+            // Força o motor a processar o estado sem a bola (para atualizar armados e turnos)
+            engine->processNumber(0);
+
+            // Gera status sincronizado após as reaberturas
+            QJsonObject sync = getGameStatusJson(session.sorteioId);
+            sync["action"] = "number_cancelled";
+            sync["number"] = num;
+            sync["reabertos"] = reabertos;
+            broadcastToGame(session.sorteioId, sync);
+
+            // CRITICAL FIX: Força uma sincronização completa para garantir que o painel atualize os status dos prêmios
+            QJsonObject fullSync = getGameStatusJson(session.sorteioId);
+            fullSync["action"] = "sync_status";
+            broadcastToGame(session.sorteioId, fullSync);
+
+            // REGRA DE SEGURANÇA: Reativa a chave se o sorteio não estiver mais concluído
+            bool isFinished = sync["isFinished"].toBool();
+            if (!isFinished && session.isOperator && session.chaveId > 0) {
+                m_db->reativarChave(session.chaveId);
+                qInfo() << "[SECURITY] Sorteio" << session.sorteioId << "REABERTO via Undo. Chave" << session.chaveId << "reativada.";
+            }
         }
     }
     else if (action == "start_game" && session.isOperator) {
+        // 1. Verificação de Segurança via Banco de Dados (Ultimate Source of Truth)
+        QJsonObject chaveInfo = m_db->validarChaveAcesso(session.accessKey);
+        if (chaveInfo.isEmpty() && session.chaveId > 0) {
+             // Se a chave não for encontrada como 'ativa', provavelmente já foi bloqueada
+             QJsonObject error;
+             error["action"] = "draw_number_error";
+             error["message"] = "Esta chave de acesso já foi utilizada para concluir um sorteio e não permite mais reinícios.";
+             sendJson(client, error);
+             qWarning() << "[SECURITY] Bloqueio de Reset: Chave já utilizada no DB. ChaveID:" << session.chaveId;
+             return;
+        }
+
+        // 2. Bloqueio de reset para sorteios já concluídos (via estado do motor)
+        QJsonObject currentStatus = getGameStatusJson(session.sorteioId);
+        bool finished = currentStatus["isFinished"].toBool();
+        
+        qInfo() << "[DEBUG] Solicitação de RESET para SorteioID:" << session.sorteioId 
+                << "Status isFinished:" << finished;
+
+        if (finished) {
+            QJsonObject error;
+            error["action"] = "draw_number_error";
+            error["message"] = "Este sorteio já foi concluído e não pode ser reiniciado. A chave de acesso foi inativada.";
+            sendJson(client, error);
+
+            // Garantia extra: inativa no banco se ainda não estiver
+            if (session.chaveId > 0) m_db->bloquearChave(session.chaveId);
+            return;
+        }
+
         engine->startNewGame();
         m_db->limparSorteio(session.sorteioId);
         QJsonObject broadcast;
@@ -604,10 +708,28 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         qInfo() << "BingoServer: Relatório de depuração solicitado pelo cliente. Enviado.";
     }
     else if (action == "add_prize" && session.isOperator) {
-        QString nome = json["nome"].toString();
+        QString nome = json["nome"].toString().trimmed();
         QString tipo = json["tipo"].toString();
         QJsonArray padrao = json["padrao"].toArray();
         int ordem = json["ordem"].toInt();
+
+        // VALIDAÇÃO: Evitar nomes duplicados
+        QJsonArray existingPrizes = m_db->getPremiacoes(session.sorteioId);
+        bool duplicado = false;
+        for (int i = 0; i < existingPrizes.size(); ++i) {
+            if (existingPrizes[i].toObject()["nome"].toString().trimmed().compare(nome, Qt::CaseInsensitive) == 0) {
+                duplicado = true;
+                break;
+            }
+        }
+
+        if (duplicado) {
+            QJsonObject error;
+            error["action"] = "add_prize_error";
+            error["message"] = QString("Já existe uma premiação com o nome '%1'.").arg(nome);
+            sendJson(client, error);
+            return;
+        }
         
         if (m_db->addPremiacao(session.sorteioId, nome, tipo, padrao, ordem)) {
             // Sincroniza o motor com o banco (recarrega tudo para garantir IDs corretos)
@@ -861,6 +983,30 @@ QJsonObject BingoServer::getGameStatusJson(int sorteioId)
     sync["numChances"] = prefs["numChances"].toInt(1);
     sync["maxBalls"] = 75; // Todo: obter do banco se disponível
     sync["tipo_grade"] = sorteio["tipo_grade"].toString();
+
+    // Verificação de conclusão
+    bool allRealized = true;
+    auto prizesList = engine->getPrizes();
+    if (prizesList.isEmpty()) {
+        allRealized = false;
+        qDebug() << "[DEBUG] getGameStatusJson: SorteioID" << sorteioId << "sem prêmios - isFinished=false";
+    } else {
+        QString debugPrizes;
+        for(const auto &p : prizesList) {
+            debugPrizes += QString("[%1: A=%2, R=%3] ").arg(p.nome).arg(p.active).arg(p.realizada);
+            if (p.active && !p.realizada) {
+                allRealized = false;
+                // Não break aqui para logar todos os estados se necessário, mas para performance:
+                // break; 
+            }
+        }
+        if (!allRealized) {
+             qDebug() << "[DEBUG] getGameStatusJson: SorteioID" << sorteioId << "em aberto. Estados:" << debugPrizes;
+        } else {
+             qInfo() << "[DEBUG] getGameStatusJson: SorteioID" << sorteioId << "CONCLUÍDO. Todos prêmios realizados.";
+        }
+    }
+    sync["isFinished"] = allRealized;
 
     return sync;
 }

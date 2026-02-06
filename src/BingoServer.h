@@ -13,6 +13,7 @@
 
 struct ClientSession {
     int sorteioId;
+    int chaveId;
     QString accessKey;
     bool isOperator; // Se acessou com a chave de gerenciamento
 };

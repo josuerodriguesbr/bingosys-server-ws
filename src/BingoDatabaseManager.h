@@ -20,6 +20,7 @@ public:
     // Chaves de Acesso
     QJsonObject validarChaveAcesso(const QString &chave);
     bool bloquearChave(int chaveId);
+    bool reativarChave(int chaveId);
 
     // Sorteios (Global/Admin)
     QJsonArray listarTodosSorteios();

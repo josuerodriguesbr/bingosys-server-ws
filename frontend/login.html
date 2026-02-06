@@ -128,30 +128,12 @@
     <div class="login-card">
         <div class="logo">BINGOSYS</div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="alternarAba('chave')">OPERADOR</button>
-            <button class="tab-btn" onclick="alternarAba('admin')">ADMIN</button>
-        </div>
-
         <div id="secao-chave" class="form-section active">
             <div class="input-group">
                 <label>Chave de Acesso do Sorteio</label>
                 <input type="text" id="access-key" placeholder="XXXX-XXXX" maxlength="20">
             </div>
             <button id="btn-login-key">ENTRAR NO SORTEIO</button>
-        </div>
-
-        <div id="secao-admin" class="form-section">
-            <div class="input-group">
-                <label>Usuário Mestre</label>
-                <input type="text" id="admin-user" placeholder="admin"
-                    style="text-transform: none; letter-spacing: normal;">
-            </div>
-            <div class="input-group">
-                <label>Senha</label>
-                <input type="password" id="admin-pass" placeholder="••••••••">
-            </div>
-            <button id="btn-login-admin" style="background: #6366f1;">ENTRAR COMO MESTRE</button>
         </div>
 
         <div id="secao-participante" class="form-section">
@@ -172,12 +154,9 @@
     <script src="js/auth.js"></script>
     <script>
         const btnLoginChave = document.getElementById('btn-login-key');
-        const btnLoginAdmin = document.getElementById('btn-login-admin');
         const btnLoginPart = document.getElementById('btn-login-participante');
 
         const inputChave = document.getElementById('access-key');
-        const inputUsuario = document.getElementById('admin-user');
-        const inputSenha = document.getElementById('admin-pass');
         const inputTelefone = document.getElementById('user-phone');
 
         const msgErro = document.getElementById('error-msg');
@@ -188,23 +167,8 @@
 
         if (chaveUrl) {
             inputChave.value = chaveUrl;
-            document.querySelector('.tabs').style.display = 'none';
             document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
             document.getElementById('secao-participante').classList.add('active');
-        }
-
-        function alternarAba(aba) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-
-            if (aba === 'chave') {
-                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-                document.getElementById('secao-chave').classList.add('active');
-            } else {
-                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                document.getElementById('secao-admin').classList.add('active');
-            }
-            msgErro.style.display = 'none';
         }
 
         btnLoginChave.onclick = () => {
@@ -213,15 +177,6 @@
             btnLoginChave.disabled = true;
             msgErro.style.display = 'none';
             bingoSocket.login(chave);
-        };
-
-        btnLoginAdmin.onclick = () => {
-            const usuario = inputUsuario.value.trim();
-            const senha = inputSenha.value;
-            if (!usuario || !senha) return;
-            btnLoginAdmin.disabled = true;
-            msgErro.style.display = 'none';
-            bingoSocket.send('login_admin', { usuario, senha });
         };
 
         btnLoginPart.onclick = () => {
@@ -234,26 +189,20 @@
         };
 
         bingoSocket.on('login_success', (data) => {
-            if (data.is_master) {
-                BingoAuth.saveSession(data.token, true, 0, true);
-                window.location.href = 'admin_tenants.html';
-            } else {
-                const telefone = inputTelefone.value.trim();
-                BingoAuth.saveSession(inputChave.value.trim(), data.is_operator, data.sorteio_id, false, telefone);
-                window.location.href = 'panel.html';
-            }
+            const telefone = inputTelefone.value.trim();
+            BingoAuth.saveSession(inputChave.value.trim(), data.is_operator, data.sorteio_id, false, telefone);
+            window.location.href = 'panel.html';
         });
 
         bingoSocket.on('login_error', (data) => {
             btnLoginChave.disabled = false;
-            btnLoginAdmin.disabled = false;
+            btnLoginPart.disabled = false;
             msgErro.innerText = data.message || "Erro ao entrar.";
             msgErro.style.display = 'block';
         });
 
         // Enter key support
         inputChave.onkeyup = (e) => { if (e.key === 'Enter') btnLoginChave.onclick(); };
-        inputSenha.onkeyup = (e) => { if (e.key === 'Enter') btnLoginAdmin.onclick(); };
     </script>
 </body>
 

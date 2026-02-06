@@ -764,19 +764,38 @@ sudo -u postgres psql -d bingosys
 =========================================================================================
 
 
+
 ================================================================================
-Logue como Admin (admin / Bingo2026!@#).
+SOBRE A SEQUENCIAA DE CHAMADA ESTÁ REPRESANDO AS PREMIAÇÕES DO TIPO FORMA
 ================================================================================
+As premiações do tipo FOrMA não podem esperar para ficarem valendo, durante o sorteio, 
+não podem esperar pela sua vez, como você colocou a ordem de chamadas das premiações
+ de forma global, sempre vai acontecer o seguinte: Quando chega a vez de uma premiaçãodo
+ tipo forma, vai acontecer que vai dá muito ganhadores, pois já pode ter muitas carteloa 
+ com numeros sorteados, com isso vemos que as formas elas têm que participar desde o
+ início do sorteio, até porque pode acontecer de ocorrer uma forma antes de uma quina,
+ isso é normalmente esperado. Atualmente uma forma que está com um ID muito alto,
+ só está sendo processado muito tempo depois que foram chamadas muitos numeros e ai
+ acontece o seguinte, quando chega a vez de tal forma, é selecionado muitas
+  cartelas nesssa forma, pois a forma se encaixa  em varias cartelas que já possuem
+  numeros sorteados. Deu para entender a questão?
+
+================================================================================
+
 
 
 
 ================================================================================
 ACESSO AO NOTEBOOK
 ================================================================================
+Segue informações para você se conectar ao notebook que está servido de VPSS local 
+para testes
 
-Entendido, Josué! Ótima ideia. Preparei um guia rápido chamado acesso_notebook.md com todas as informações que eu usei para me conectar e onde cada coisa está organizada.
+Entendido, Josué! Ótima ideia. Preparei um guia rápido chamado acesso_notebook.md 
+com todas as informações que eu usei para me conectar e onde cada coisa está organizada.
 
-Se por acaso eu "esquecer" ou travar, basta você me enviar o conteúdo desse arquivo ou me lembrar: "Use as credenciais do arquivo de acesso ao notebook".
+Se por acaso eu "esquecer" ou travar, basta você me enviar o conteúdo desse arquivo 
+ou me lembrar: "Use as credenciais do arquivo de acesso ao notebook".
 
 Aqui está o resumo do que incluí:
 
@@ -812,7 +831,18 @@ markdown
 - User/Pass: bingosys / bingosys
 ### Pasta do Projeto
 /home/josuerodrigues/bingosys
-Salvei essa documentação em um formato que posso ler facilmente depois. Qualquer dúvida sobre a estrutura do código, é só perguntar!
+Salvei essa documentação em um formato que posso ler facilmente depois. 
+Qualquer dúvida sobre a estrutura do código, é só perguntar!
+
+Com esta informações você pode acessa o notebook via ssh, e você mesmo podeexecutar
+ as ações de compilação quando o código for alterado. Lembre que você já vinha
+ sempre compilando para mim o projeto lá no notebook.
+
+ Sempre fique atento na atualização do projeto no repositório github, depois que
+ confirmamos juntos uma versão que vale a pena ser enviada.
+ https://github.com/josuerodriguesbr/bingosys-server-ws
+
+Logue como Admin (admin / Bingo2026!@# ). Essa informação é para mim, ignore-a!
 ================================================================================
 
 

@@ -252,6 +252,7 @@ int BingoGameEngine::undoLastNumber()
             // 1. Desfazer BINGO Global (Cartela Cheia)
             if (oldMatches == state.totalNumbers) {
                 m_winners.removeAll(ticketId);
+                state.usedPatterns.remove("cheia"); // FIX: Permite ganhar cheia novamente
             }
 
             if (newMissingCount == 1) {
@@ -328,8 +329,31 @@ int BingoGameEngine::undoLastNumber()
                     else if (prizeMissing == 1) nearWin = true;
                 }
 
-                // Aplica mudanças no estado do prêmio
-                if (!stillWon) prize.winners.removeAll(ticketId);
+                // Aplica mudanças no estado do prêmio e da cartela
+                if (!stillWon) {
+                    qInfo() << "[UNDO-DETAIL] Ticket" << ticketId << "deixou de meet criteria para prêmio" << prize.id << prize.nome << ". Removendo...";
+                    
+                    // SE NÃO GANHOU MAIS: Limpa o registro de vitória interna da cartela para este prêmio
+                    state.wonPrizeIds.remove(prize.id);
+                    int removedCount = prize.winners.removeAll(ticketId);
+                    prize.winnerPatterns.remove(ticketId);
+
+                    qInfo() << "[UNDO-DETAIL] Ticket" << ticketId << "removido de prize.winners. Ocorrências removidas:" << removedCount;
+
+                    // Limpa padrões usados especificamente para este prêmio/tipo
+                    if (prize.tipo == "quina") {
+                         state.usedPatterns.remove("quina");
+                    } else if (prize.tipo == "forma") {
+                         state.usedPatterns.remove("forma");
+                    } else if (prize.tipo == "cheia") {
+                         state.usedPatterns.remove("cheia");
+                    }
+                    
+                    qInfo() << "[UNDO-ENGINE] Ticket" << ticketId << "deixou de ganhar prêmio" << prize.id << "(" << prize.nome << ")";
+                } else {
+                    qDebug() << "[UNDO-DETAIL] Ticket" << ticketId << "ainda ganha prêmio" << prize.id << "com as bolas restantes.";
+                }
+
                 if (nearWin && !stillWon) {
                     if (!prize.near_winners.contains(ticketId)) prize.near_winners.append(ticketId);
                 } else {
@@ -338,7 +362,8 @@ int BingoGameEngine::undoLastNumber()
             }
         }
     }
-
+    
+    qInfo() << "[UNDO-ENGINE] Sorteio atualizado. Última bola removida:" << lastNum << ". Restantes:" << m_drawnNumbers.size();
     return lastNum;
 }
 

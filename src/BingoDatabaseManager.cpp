@@ -47,6 +47,30 @@ QJsonObject BingoDatabaseManager::validarChaveAcesso(const QString &chave)
     return obj;
 }
 
+bool BingoDatabaseManager::bloquearChave(int chaveId)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE CHAVES_ACESSO SET status = 'utilizada' WHERE id = :id");
+    query.bindValue(":id", chaveId);
+    if (!query.exec()) {
+        qCritical() << "Erro ao inativar chave:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool BingoDatabaseManager::reativarChave(int chaveId)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE CHAVES_ACESSO SET status = 'ativa' WHERE id = :id");
+    query.bindValue(":id", chaveId);
+    if (!query.exec()) {
+        qCritical() << "Erro ao reativar chave:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
 QJsonObject BingoDatabaseManager::getSorteio(int sorteioId)
 {
     QSqlQuery query;

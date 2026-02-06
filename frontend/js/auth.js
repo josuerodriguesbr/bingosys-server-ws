@@ -18,14 +18,20 @@ const BingoAuth = {
     },
 
     logout() {
+        const session = this.getSession();
+        const isMaster = session.isMaster;
         localStorage.clear();
-        window.location.href = 'login.html';
+        if (isMaster) {
+            window.location.href = 'master.html';
+        } else {
+            window.location.href = 'login.html';
+        }
     },
 
-    checkAccess(requiredOperator = false) {
+    checkAccess(requiredOperator = false, redirectUrl = 'login.html') {
         const session = this.getSession();
         if (!session.chave) {
-            window.location.href = 'login.html';
+            window.location.href = redirectUrl;
             return false;
         }
         if (requiredOperator && !session.isOperator) {

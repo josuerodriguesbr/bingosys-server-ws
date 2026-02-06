@@ -128,10 +128,51 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            flex: 1;
+            justify-content: flex-start;
+            flex: 0 0 auto;
             width: 100%;
-            min-height: 400px;
+            padding-top: 2rem;
+            position: relative;
+        }
+
+        .info-badge {
+            position: absolute;
+            top: 0.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.6rem 0.8rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .info-badge.left {
+            left: 0.5rem;
+        }
+
+        .info-badge.right {
+            right: 0.5rem;
+        }
+
+        .counter-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .counter-value {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--accent-glow);
+            line-height: 1;
         }
 
         .big-ball {
@@ -174,7 +215,6 @@
 
             aside {
                 height: auto;
-                max-height: 400px;
             }
 
             .big-ball {
@@ -271,8 +311,6 @@
         /* Lists */
         .ticket-list {
             list-style: none;
-            overflow-y: auto;
-            max-height: calc(100vh - 150px);
         }
 
         .ticket-item {
@@ -827,6 +865,18 @@
             box-shadow: 0 0 10px var(--accent-primary);
             border-color: #fff;
         }
+
+        /* Ocultar barra de rolagem mantendo funcionalidade */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
     </style>
 </head>
 
@@ -840,33 +890,43 @@
                 style="border-color: #10b981; color: #10b981;">🔗 CONVITE</button>
             <a href="vendas.html" id="btn-sales" class="nav-btn">🛒 VENDAS</a>
             <button id="btn-prizes" onclick="openPrizes()" class="nav-btn">🏆 PREMIAÇÕES</button>
-            <button id="btn-settings" onclick="openSettings()" class="nav-btn">⚙️ PREFERÊNCIAS</button>
+            <button id="btn-settings" onclick="openSettings()" class="nav-btn">⚙️ CONFIGURAÇÕES</button>
             <button onclick="logout()" class="nav-btn" style="color: var(--danger)">🚪 SAIR</button>
         </div>
     </nav>
 
     <div class="main-grid">
         <!-- Left: Near Wins (Good) -->
-        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+        <aside id="aside-near-1" class="glass-panel no-scrollbar"
+            style="padding: 1rem; display: flex; flex-direction: column;">
             <div id="section-boa">
                 <div class="section-title">Boa (Falta 1)</div>
-                <ul id="list-near-1" class="ticket-list" style="flex: 1;">
+                <div id="list-near-1">
                     <!-- Items injected via JS -->
-                </ul>
+                </div>
                 <div id="more-near-1" class="more-badge" style="display: none;"></div>
             </div>
 
             <div id="section-my-tickets" style="display: none; flex: 1; flex-direction: column;">
                 <div class="section-title" style="color: #10b981; border-color: #10b981;">Minhas Cartelas</div>
-                <ul id="list-my-tickets" class="ticket-list" style="flex: 1;">
+                <div id="list-my-tickets">
                     <!-- Participantes as cartelas aqui -->
-                </ul>
+                </div>
             </div>
         </aside>
 
         <!-- Center: Highlights -->
         <main class="glass-panel main-display">
             <div class="current-ball-display">
+                <div class="info-badge left">
+                    <span class="counter-label">TIPO</span>
+                    <span id="draw-type-display" class="counter-value"
+                        style="font-size: 1.1rem; padding: 0.2rem 0;">--</span>
+                </div>
+                <div class="info-badge right">
+                    <span class="counter-label">BOLAS</span>
+                    <span id="total-balls-count" class="counter-value">0</span>
+                </div>
                 <div
                     style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">
                     Última Bola</div>
@@ -909,11 +969,12 @@
         </main>
 
         <!-- Right: Winners -->
-        <aside class="glass-panel" style="padding: 1rem; display: flex; flex-direction: column;">
+        <aside id="aside-winners" class="glass-panel no-scrollbar"
+            style="padding: 1rem; display: flex; flex-direction: column;">
             <div class="section-title" style="color: var(--success); border-color: var(--success);">Ganhadores!</div>
-            <ul id="list-winners" class="ticket-list" style="flex: 1;">
+            <div id="list-winners">
                 <!-- Winners... -->
-            </ul>
+            </div>
             <div id="more-winners" class="more-badge" style="display: none;"></div>
         </aside>
     </div>
@@ -922,7 +983,7 @@
     <div id="modal-settings" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <div class="modal-title">Preferências do Sorteio</div>
+                <div class="modal-title">Configurações do Sorteio</div>
             </div>
 
             <div class="form-group">
@@ -1044,6 +1105,54 @@
         let availableModes = [];
         let showAllWinners = false;
         let showAllNear1 = false;
+        let isGameFinished = false;
+        let isDrawing = false; // Flag para evitar double-click e números fantasmas
+
+        function updateResetButtonState() {
+            const btnReset = document.getElementById('btn-reset');
+            const btnConfirm = document.getElementById('btn-confirm');
+            const btnRandom = document.getElementById('btn-random');
+            const btnUndo = document.getElementById('btn-undo');
+            const inputManual = document.getElementById('manual-num');
+
+            if (isGameFinished) {
+                // TRAVA TOTAL DE ENTRADA (Solicitação Crítica)
+                if (btnConfirm) btnConfirm.disabled = true;
+                if (btnRandom) btnRandom.disabled = true;
+                if (inputManual) {
+                    inputManual.disabled = true;
+                    inputManual.style.opacity = '0.5';
+                }
+                if (btnReset) {
+                    btnReset.style.opacity = '0.5';
+                    btnReset.style.pointerEvents = 'none';
+                    btnReset.disabled = true;
+                    btnReset.title = "Sorteio concluído. A chave foi inativada.";
+                }
+                // O Desfazer deve continuar habilitado para permitir reabrir o sorteio
+                if (btnUndo) {
+                    btnUndo.disabled = false;
+                    btnUndo.style.opacity = '1';
+                }
+            } else {
+                // LIBERA ENTRADA (Se não estiver no meio de um processamento de bola)
+                const disabledByDrawing = isDrawing;
+
+                if (btnConfirm) btnConfirm.disabled = disabledByDrawing;
+                if (btnRandom) btnRandom.disabled = disabledByDrawing;
+                if (btnUndo) btnUndo.disabled = (drawnNumbers.length === 0 || disabledByDrawing);
+                if (inputManual) {
+                    inputManual.disabled = disabledByDrawing;
+                    inputManual.style.opacity = disabledByDrawing ? '0.5' : '1';
+                }
+                if (btnReset) {
+                    btnReset.style.opacity = '1';
+                    btnReset.style.pointerEvents = 'auto';
+                    btnReset.disabled = disabledByDrawing;
+                    btnReset.title = "";
+                }
+            }
+        }
 
         function copyInviteLink() {
             const url = window.location.origin + window.location.pathname.replace('panel.html', 'login.html') + '?chave=' + session.chave;
@@ -1148,6 +1257,7 @@
 
             // Sincroniza bolas
             drawnNumbers = data.drawnNumbers || [];
+            updateTotalBallsCounter();
             elHistory.innerHTML = "";
             drawnNumbers.forEach(num => {
                 const ball = document.createElement('div');
@@ -1183,6 +1293,10 @@
                 populateModesList();
             }
 
+            isGameFinished = !!data.isFinished;
+            isDrawing = false;
+            updateResetButtonState();
+
             renderMyTickets();
             updateConfigBadge();
         });
@@ -1204,6 +1318,7 @@
             if (!drawnNumbers.includes(num)) {
                 drawnNumbers.push(num);
                 updateDisplay(num);
+                updateTotalBallsCounter();
             }
 
             // Atualiza ganhadores unificando listas
@@ -1211,6 +1326,11 @@
 
             updateWinners(lastWinners);
             updateNearWins(lastNearWins);
+
+            isGameFinished = !!data.isFinished;
+            isDrawing = false; // Libera
+            updateResetButtonState();
+
             renderMyTickets();
         });
 
@@ -1218,6 +1338,7 @@
             const num = data.number;
             // Remove do array
             drawnNumbers = drawnNumbers.filter(n => n !== num);
+            updateTotalBallsCounter();
 
             // Remove do histórico visual (primeiro filho)
             if (elHistory.firstChild) elHistory.removeChild(elHistory.firstChild);
@@ -1230,13 +1351,17 @@
                 elCurrentBall.textContent = "--";
             }
 
-            // Atualiza listas
-            if (data.winners) updateWinners(data.winners);
-            if (data.near_wins) updateNearWins(data.near_wins);
+            // Atualiza listas unificadas para refletir a remoção do ganhador
+            lastWinners = aggregateWinners(data);
+            if (data.near_wins) lastNearWins = data.near_wins;
 
-            // Re-renderiza para atualizar destaques
             updateWinners(lastWinners);
             updateNearWins(lastNearWins);
+
+            isGameFinished = !!data.isFinished;
+            isDrawing = false; // Libera
+            updateResetButtonState();
+
             renderMyTickets();
         });
 
@@ -1256,24 +1381,44 @@
         });
 
         bingoSocket.on('game_started', () => {
+            drawnNumbers = [];
+            updateTotalBallsCounter();
             resetBoard();
         });
 
+        function updateTotalBallsCounter() {
+            const el = document.getElementById('total-balls-count');
+            if (el) el.textContent = drawnNumbers.length;
+        }
+
         // Admin Actions
         function requestNewGame() {
+            if (isGameFinished) {
+                alert("Este sorteio já foi concluído e não pode ser reiniciado. A chave de acesso foi inativada.");
+                return;
+            }
             if (confirm("Deseja iniciar um novo jogo? Isso limpará o sorteio atual.")) {
                 bingoSocket.send("start_game");
             }
         }
 
         function undoLast() {
+            if (isDrawing) return;
             if (drawnNumbers.length === 0) return;
             if (confirm("Deseja cancelar a última bola sorteada (" + drawnNumbers[drawnNumbers.length - 1] + ")?")) {
+                isDrawing = true;
+                updateResetButtonState();
                 bingoSocket.send("undo_last");
             }
         }
 
         function drawRandomNumber() {
+            if (isGameFinished) {
+                alert("Sorteio já concluído!");
+                return;
+            }
+            if (isDrawing) return;
+
             if (drawnNumbers.length >= config.maxBalls) {
                 alert("Todos os números já foram sorteados!");
                 return;
@@ -1284,10 +1429,18 @@
                 num = Math.floor(Math.random() * config.maxBalls) + 1;
             } while (drawnNumbers.includes(num));
 
+            isDrawing = true;
+            updateResetButtonState();
             bingoSocket.send("draw_number", { number: num });
         }
 
         function drawManual() {
+            if (isGameFinished) {
+                alert("Sorteio já concluído!");
+                return;
+            }
+            if (isDrawing) return;
+
             const val = parseInt(elManualInput.value);
             if (isNaN(val) || val < 1 || val > config.maxBalls) {
                 alert("Por favor, digite um número entre 1 e " + config.maxBalls);
@@ -1299,6 +1452,8 @@
                 return;
             }
 
+            isDrawing = true;
+            updateResetButtonState();
             bingoSocket.send("draw_number", { number: val });
             elManualInput.value = '';
         }
@@ -1536,6 +1691,9 @@
             lastWinners = [];
             lastNearWins = {};
             showAllNear1 = false;
+
+            isGameFinished = false;
+            updateResetButtonState();
         }
 
         // Settings Modal Logic
@@ -1661,6 +1819,9 @@
         });
 
         bingoSocket.on('draw_number_error', (data) => {
+            isDrawing = false; // DESBLOQUEIA em caso de erro
+            updateResetButtonState();
+
             const elWarning = document.getElementById('draw-warning');
             if (elWarning) {
                 elWarning.style.display = 'block';
@@ -1671,8 +1832,17 @@
             console.error("Erro de sorteio:", data.message);
         });
 
+        bingoSocket.on('add_prize_error', (data) => {
+            alert("Erro ao adicionar prêmio: " + data.message);
+        });
+
         bingoSocket.on('prize_status_updated', (data) => {
             console.log("Status do prêmio atualizado:", data);
+            // Sincroniza estado final se necessário
+            if (data.isFinished !== undefined) {
+                isGameFinished = !!data.isFinished;
+                updateResetButtonState();
+            }
         });
 
         function renderPrizeList() {
@@ -1765,9 +1935,16 @@
         }
 
         function saveNewPrize() {
-            const nome = document.getElementById('prz-nome').value;
+            const nomeInput = document.getElementById('prz-nome');
+            const nome = nomeInput.value.trim();
             const tipo = document.getElementById('prz-tipo').value;
             if (!nome) return alert("Por favor, informe a descrição do prêmio.");
+
+            // Validação de nomes duplicados
+            const duplicado = currentPrizes.find(p => p.nome.toLowerCase() === nome.toLowerCase());
+            if (duplicado) {
+                return alert(`Já existe um prêmio cadastrado com o nome "${nome}". Por favor, escolha um nome diferente.`);
+            }
 
             const padrao = (tipo === 'forma') ? Array.from(shapeIndices) : [];
 
@@ -1792,9 +1969,15 @@
         function updateConfigBadge() {
             const badge = document.getElementById('mode-display');
             if (badge) {
-                // Simplificado para o modo atual
                 badge.textContent = `Sorteio #${drawnNumbers.length > 0 ? "Em Andamento" : "Pronto"}`;
             }
+
+            // Atualiza o novo painel informativo (Tipo de Sorteio)
+            const typeDisplay = document.getElementById('draw-type-display');
+            if (typeDisplay) {
+                typeDisplay.textContent = config.tipo_grade || "75x15";
+            }
+
             if (elManualInput) elManualInput.max = config.maxBalls || 75;
         }
 
