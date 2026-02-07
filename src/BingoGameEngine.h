@@ -73,7 +73,7 @@ public:
     bool processNumber(int number);
 
     // Cancela a ultima bola sorteada
-    int undoLastNumber();
+    int undoLastNumber(const QSet<int> &preRealizedIds = {});
 
     // Gestão de Premiações
     void addPrize(const Prize &prize);

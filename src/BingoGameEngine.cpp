@@ -243,7 +243,7 @@ bool BingoGameEngine::processNumber(int number)
     return hasUpdates; 
 }
 
-int BingoGameEngine::undoLastNumber()
+int BingoGameEngine::undoLastNumber(const QSet<int> &preRealizedIds)
 {
     if (m_drawnNumbers.isEmpty()) {
         return -1;
@@ -261,6 +261,15 @@ int BingoGameEngine::undoLastNumber()
     // 2. Re-processa todas as bolas exceto a última
     for (int n : balls) {
         processNumber(n);
+        
+        // Verifica se algum prêmio que estava 'realizado' antes do undo já obteve vitoria neste replay.
+        // Se sim, precisamos marcá-lo como 'realizada' novamente para avançar o turno no replay.
+        for (auto &p : m_prizes) {
+            if (preRealizedIds.contains(p.id) && !p.realizada && !p.winners.isEmpty()) {
+                p.realizada = true;
+                qInfo() << "[UNDO-REPLAY] Restaurando status 'realizada' para prêmio" << p.id << p.nome << "durante replay.";
+            }
+        }
     }
 
     qInfo() << "[UNDO-ENGINE] Replay concluído. Bolas restantes:" << m_drawnNumbers.size();

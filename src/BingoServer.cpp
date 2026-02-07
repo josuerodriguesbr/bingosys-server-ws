@@ -600,24 +600,31 @@ void BingoServer::handleJsonMessage(QWebSocket *client, const QJsonObject &json)
         }
     }
     else if (action == "undo_last" && session.isOperator) {
-        int num = engine->undoLastNumber();
+        // 1. Captura o estado dos prêmios ANTES do undo para saber quais reabrir (se necessário)
+        QSet<int> preRealizedIds;
+        auto prizesBefore = engine->getPrizes();
+        for (const auto &p : prizesBefore) {
+            if (p.realizada) preRealizedIds.insert(p.id);
+        }
+
+        // 2. Executa o undo no motor passando os IDs que já estavam realizados
+        int num = engine->undoLastNumber(preRealizedIds);
+
         if (num != -1) {
             bool dbOk = m_db->removerUltimaBola(session.sorteioId, num);
             qInfo() << "[UNDO] Bola" << num << "removida. DB status:" << dbOk;
             
-            // RE-AVALIAÇÃO TOTAL E AGRESSIVA:
-            // Sincronizamos o status de TODOS os prêmios. 
-            // Se o motor diz que um prêmio NÃO tem ganhadores, ele NÃO pode estar 'realizado'.
-            auto prizes = engine->getPrizes();
+            // 3. RE-AVALIAÇÃO DE REABERTURA:
+            // Sincronizamos o status no DB apenas para prêmios que estavam realizados mas agora não estão.
+            auto prizesAfter = engine->getPrizes();
             int reabertos = 0;
             QString reabertosNomes;
 
-            for(const auto &p : prizes) {
-                // Se o prêmio está marcado como realizado mas o motor não tem ganhadores para ele
-                // OU se o prêmio é do tipo 'cheia' e acabamos de desfazer uma bola (desconfiança total)
-                if (p.realizada && p.winners.isEmpty()) {
+            for(const auto &p : prizesAfter) {
+                // Se o prêmio estava realizado ANTES, mas no replay sem a última bola o motor diz que NÃO está 'realizada'
+                // (isso acontece porque ele perdeu os ganhadores com a remoção da bola).
+                if (preRealizedIds.contains(p.id) && !p.realizada) {
                     m_db->atualizarStatusPremio(p.id, false);
-                    engine->setPrizeStatus(p.id, false);
                     reabertos++;
                     reabertosNomes += p.nome + " ";
                 }
