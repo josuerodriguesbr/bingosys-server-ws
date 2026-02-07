@@ -5,25 +5,31 @@
 #include <QList>
 #include <QSet>
 #include <QMap>
+#include <QJsonObject>
+#include <QJsonArray>
 #include "BingoTicketParser.h"
 
 struct TicketState {
     int ticketId;
-    int matches; // Quantidade de acertos na grade atual
-    QSet<int> missingNumbers; // Numeros que faltam (para fechar a grade atual)
+    int baseId; // Qual base este estado representa
+    int matches; 
+    QSet<int> missingNumbers; 
     int totalNumbers;
-    QSet<int> wonPrizeIds; // IDs dos prêmios já ganhos por esta cartela
-    QMap<QString, QList<QList<int>>> usedPatterns; // Tipo de prêmio -> Lista de índices que já geraram prêmio
+    QSet<int> wonPrizeIds; 
+    QMap<QString, QList<QList<int>>> usedPatterns; 
 };
 
 struct Prize {
     int id;
     QString nome;
-    QString tipo; // "quina", "forma", "cheia"
-    QSet<int> padraoIndices; // Índices (0-24) que compõem o padrão
+    QString tipo; 
+    int baseId;      // Base de cartelas para este prêmio
+    int gridIndex;   // Qual grade da base usar
+    QJsonObject configuracoes; // Configurações específicas (ex: acumula, etc)
+    QSet<int> padraoIndices; 
     QList<int> winners;
     QList<int> near_winners;
-    QMap<int, QList<int>> winnerPatterns; // TicketID -> Lista de Índices que formaram a vitória
+    QMap<int, QList<int>> winnerPatterns; 
     bool active;
     bool realizada;
 };
@@ -34,12 +40,11 @@ class BingoGameEngine : public QObject
 public:
     explicit BingoGameEngine(QObject *parent = nullptr);
 
-    // Carrega as cartelas para o jogo
-    void loadTickets(const QVector<BingoTicket> &tickets);
+    // Carrega as cartelas de uma base para o jogo
+    void loadBase(int baseId, const QVector<BingoTicket> &tickets);
 
-    // Configura qual "grid" usar (0 = 1ª parte, 1 = 2ª parte...)
-    // Isso define o modo de jogo (ex: 15x60 ou 25x75)
-    void setGameMode(int gridIndex);
+    // O modo agora é definido por prêmio, mas mantemos o global para compatibilidade se necessário
+    void setGameMode(int gridIndex); 
     int getGameMode() const { return m_currentGridIndex; }
 
     void setMaxBalls(int max) { m_maxBalls = max; }
@@ -59,10 +64,9 @@ public:
     int getRegisteredCount() const { return m_registeredTickets.size(); }
     bool isTicketRegistered(int ticketId) const { return m_registeredTickets.contains(ticketId); }
     bool isValidCheckDigit(int ticketId, int checkDigit) const;
-    QSet<int> getRegisteredTickets() const { return m_registeredTickets; }
-    const QVector<BingoTicket>& getAllTickets() const { return m_allTickets; }
     QString getFormattedBarcode(int ticketId) const;
-    QVector<int> getTicketNumbers(int ticketId) const;
+    QSet<int> getRegisteredTickets() const { return m_registeredTickets; }
+    QVector<int> getTicketNumbers(int baseId, int ticketId) const;
 
     // Processa um numero sorteado
     // Retorna true se houver novidades (novos ganhadores ou armados)
@@ -84,24 +88,24 @@ public:
     QJsonObject getDebugReport() const;
 
 private:
-    QVector<BingoTicket> m_allTickets; // Todas as cartelas carregadas
-    int m_currentGridIndex; // Qual grade estamos jogando
-    int m_maxBalls;         // Limite de bolas no globo (ex: 75)
-    int m_numChances;       // Quantidade de chances (cartelas em sequencia)
+    QMap<int, QVector<BingoTicket>> m_bases; // baseId -> Tickets
+    int m_currentGridIndex; 
+    int m_maxBalls;         
+    int m_numChances;       
     
-    QList<int> m_drawnNumbers; // Histórico do sorteio atual
+    QList<int> m_drawnNumbers; 
     
-    // Estado de cada cartela jogando: Map ID -> State
-    QMap<int, TicketState> m_activeTickets;
+    // Estado de cada cartela: Map (baseId, ticketId) -> State
+    QMap<QPair<int, int>, TicketState> m_activeTickets;
 
-    // Cache de vencedores e armados para acesso rapido
+    // Cache de vencedores e armados
     QList<int> m_winners;
-    QMap<int, QList<int>> m_nearWins; // Key: 1 (falta 1), 2 (falta 2), etc.
+    QMap<int, QList<int>> m_nearWins; 
 
-    QSet<int> m_registeredTickets; // IDs das cartelas vendidas
-    QHash<int, int> m_idToDigit;   // Mapa de ID -> Digito Verificador
-    QHash<int, QList<int>> m_numToTickets; // Mapa Número -> List de Cartelas que o possuem
-    QList<Prize> m_prizes;         // Lista de prêmios configurados
+    QSet<int> m_registeredTickets; 
+    QMap<int, QHash<int, int>> m_idToDigitByBase;   // baseId -> (ID -> Digito)
+    QMap<int, QHash<int, QList<int>>> m_numToTicketsByBase; // baseId -> (Número -> Tickets)
+    QList<Prize> m_prizes;         
 };
 
 #endif // BINGOGAMEENGINE_H

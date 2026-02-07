@@ -9,14 +9,14 @@ BingoGameEngine::BingoGameEngine(QObject *parent)
 {
 }
 
-void BingoGameEngine::loadTickets(const QVector<BingoTicket> &tickets)
+void BingoGameEngine::loadBase(int baseId, const QVector<BingoTicket> &tickets)
 {
-    m_allTickets = tickets;
-    m_idToDigit.clear();
-    for(const auto& t : m_allTickets) {
-        m_idToDigit.insert(t.id, t.checkDigit);
+    m_bases[baseId] = tickets;
+    m_idToDigitByBase[baseId].clear();
+    for(const auto& t : tickets) {
+        m_idToDigitByBase[baseId].insert(t.id, t.checkDigit);
     }
-    qInfo() << "GameEngine: Carregadas" << m_allTickets.size() << "cartelas na memoria.";
+    qInfo() << "GameEngine: Carregada base" << baseId << "com" << tickets.size() << "cartelas.";
 }
 
 void BingoGameEngine::setGameMode(int gridIndex)
@@ -25,30 +25,42 @@ void BingoGameEngine::setGameMode(int gridIndex)
     m_activeTickets.clear();
     m_winners.clear();
     m_nearWins.clear();
-    m_numToTickets.clear();
+    m_numToTicketsByBase.clear();
 
-    // Se houver cartelas registradas, usamos apenas elas.
-    // Se não, o sorteio fica vazio até que vendas sejam importadas/registradas.
-    if (!m_registeredTickets.isEmpty()) {
+    if (m_registeredTickets.isEmpty()) return;
+
+    // Inicializa estados para todas as combinações de (Base x Ticket Registrado)
+    // conforme os prêmios cadastrados
+    for (const auto &prize : m_prizes) {
+        int bid = prize.baseId;
+        int gidx = prize.gridIndex;
+        if (!m_bases.contains(bid)) continue;
+        const auto &tickets = m_bases[bid];
+
         for (int ticketId : m_registeredTickets) {
-            int idx = ticketId - 1;
-            if (idx < 0 || idx >= m_allTickets.size()) continue;
-            const auto &ticket = m_allTickets[idx];
-            if (m_currentGridIndex < 0 || m_currentGridIndex >= ticket.grids.size()) continue;
+            // Verifica se já inicializamos este par (baseId, ticketId)
+            QPair<int, int> key(bid, ticketId);
+            if (m_activeTickets.contains(key)) continue;
+
+            int idx = ticketId - 1; 
+            if (idx < 0 || idx >= tickets.size()) continue;
+            const auto &ticket = tickets[idx];
+            if (gidx < 0 || gidx >= ticket.grids.size()) continue;
 
             TicketState state;
             state.ticketId = ticket.id;
+            state.baseId = bid;
             state.matches = 0;
-            const QVector<int> &grid = ticket.grids[m_currentGridIndex];
+            const QVector<int> &grid = ticket.grids[gidx];
             state.totalNumbers = grid.size();
             for(int n : grid) {
                 state.missingNumbers.insert(n);
-                m_numToTickets[n].append(ticket.id);
+                m_numToTicketsByBase[bid][n].append(ticket.id);
             }
-            m_activeTickets.insert(ticket.id, state);
+            m_activeTickets.insert(key, state);
         }
     }
-    qInfo() << "GameEngine: Modo definido e" << m_activeTickets.size() << "cartelas ativas prontas.";
+    qInfo() << "GameEngine: Estados ativos inicializados para" << m_activeTickets.size() << "combinações base/cartela.";
 }
 
 void BingoGameEngine::startNewGame()
@@ -90,64 +102,46 @@ bool BingoGameEngine::processNumber(int number)
     
     if (number != 0) {
         qDebug() << "GameEngine: processNumber" << number << "Turno Sequencial ID:" << sequentialTurnId;
-        // 1. Atualização rápida de estados (apenas cartelas com o número sorteado)
-        const QList<int> &targets = m_numToTickets[number];
-        for (int ticketId : targets) {
-            if (!m_activeTickets.contains(ticketId)) continue;
-            TicketState &state = m_activeTickets[ticketId];
-            if (state.missingNumbers.contains(number)) {
-                state.missingNumbers.remove(number);
-                state.matches++;
+        // 1. Atualização de estados em todas as bases que contêm o número
+        for (auto it = m_numToTicketsByBase.begin(); it != m_numToTicketsByBase.end(); ++it) {
+            int bid = it.key();
+            const auto &targets = it.value()[number];
+            for (int ticketId : targets) {
+                QPair<int, int> key(bid, ticketId);
+                if (!m_activeTickets.contains(key)) continue;
+                TicketState &state = m_activeTickets[key];
+                if (state.missingNumbers.contains(number)) {
+                    state.missingNumbers.remove(number);
+                    state.matches++;
+                }
             }
         }
     }
 
     // 2. Verificação de Prêmios para TODAS as cartelas ativas (Devido a Turno Global + Formas Paralelas)
-    for (auto &state : m_activeTickets) {
-        if (state.usedPatterns.contains("cheia")) continue; // Cartela cheia já ganhou o prêmio máximo
+        for (auto it = m_activeTickets.begin(); it != m_activeTickets.end(); ++it) {
+            TicketState &state = it.value();
+            if (state.usedPatterns.contains("cheia")) continue; 
 
-        for (auto &prize : m_prizes) {
-            if (!prize.active || prize.realizada) continue;
-            
-            // REGRA DE ELEGIBILIDADE:
-            // - Prêmios do tipo "forma" são processados SEMPRE em paralelo (independente de turno).
-            // - Outros prêmios (Quinas, Cheia) seguem a ordem do Turno Sequencial.
-            bool eligible = (prize.tipo == "forma") || (sequentialTurnId != -1 && prize.id == sequentialTurnId);
-            if (!eligible) continue;
+            for (auto &prize : m_prizes) {
+                if (!prize.active || prize.realizada) continue;
+                if (prize.baseId != state.baseId) continue; // Só avalia se for a base do prêmio
 
-            bool won = false;
-            bool nearWin = false;
-            const auto &grid = m_allTickets[state.ticketId-1].grids[m_currentGridIndex];
+                bool eligible = (prize.tipo == "forma") || (sequentialTurnId != -1 && prize.id == sequentialTurnId);
+                if (!eligible) continue;
 
-            if (prize.tipo == "quina") {
-                int cols = 5;
-                int rows = grid.size() / cols;
-                for (int r = 0; r < rows; ++r) {
-                    int miss = 0;
-                    QList<int> idxs;
-                    for (int c = 0; c < cols; ++c) {
-                        int idx = c * rows + r;
-                        idxs.append(idx);
-                        if (!m_drawnNumbers.contains(grid[idx])) miss++;
-                    }
-                    if (miss == 0) {
-                        QList<int> sorted = idxs;
-                        std::sort(sorted.begin(), sorted.end());
-                        if (!state.usedPatterns["quina"].contains(sorted)) {
-                            won = true;
-                            prize.winnerPatterns[state.ticketId] = idxs;
-                            break;
-                        }
-                    }
-                    if (miss == 1) nearWin = true;
-                }
-                
-                if (!won && rows == 5 && cols == 5) {
-                    // Vertical
-                    for (int c = 0; c < cols; ++c) {
+                bool won = false;
+                bool nearWin = false;
+                const auto &tickets = m_bases[prize.baseId];
+                const auto &grid = tickets[state.ticketId-1].grids[prize.gridIndex];
+
+                if (prize.tipo == "quina") {
+                    int cols = 5;
+                    int rows = grid.size() / cols;
+                    for (int r = 0; r < rows; ++r) {
                         int miss = 0;
                         QList<int> idxs;
-                        for (int r = 0; r < rows; ++r) {
+                        for (int c = 0; c < cols; ++c) {
                             int idx = c * rows + r;
                             idxs.append(idx);
                             if (!m_drawnNumbers.contains(grid[idx])) miss++;
@@ -163,39 +157,61 @@ bool BingoGameEngine::processNumber(int number)
                         }
                         if (miss == 1) nearWin = true;
                     }
-                    // Diagonais
-                    if (!won) {
-                        int m1=0, m2=0;
-                        QList<int> i1, i2;
-                        for(int i=0; i<5; i++) {
-                            int id1 = i*5+i; i1 << id1; if(!m_drawnNumbers.contains(grid[id1])) m1++;
-                            int id2 = i*5+(4-i); i2 << id2; if(!m_drawnNumbers.contains(grid[id2])) m2++;
+                    
+                    if (!won && rows == 5 && cols == 5) {
+                        // Vertical
+                        for (int c = 0; c < cols; ++c) {
+                            int miss = 0;
+                            QList<int> idxs;
+                            for (int r = 0; r < rows; ++r) {
+                                int idx = c * rows + r;
+                                idxs.append(idx);
+                                if (!m_drawnNumbers.contains(grid[idx])) miss++;
+                            }
+                            if (miss == 0) {
+                                QList<int> sorted = idxs;
+                                std::sort(sorted.begin(), sorted.end());
+                                if (!state.usedPatterns["quina"].contains(sorted)) {
+                                    won = true;
+                                    prize.winnerPatterns[state.ticketId] = idxs;
+                                    break;
+                                }
+                            }
+                            if (miss == 1) nearWin = true;
                         }
-                        if (m1==0) { 
-                            QList<int> s=i1; std::sort(s.begin(), s.end());
-                            if(!state.usedPatterns["quina"].contains(s)) { won=true; prize.winnerPatterns[state.ticketId]=i1; }
+                        // Diagonais
+                        if (!won) {
+                            int m1=0, m2=0;
+                            QList<int> i1, i2;
+                            for(int i=0; i<5; i++) {
+                                int id1 = i*5+i; i1 << id1; if(!m_drawnNumbers.contains(grid[id1])) m1++;
+                                int id2 = i*5+(4-i); i2 << id2; if(!m_drawnNumbers.contains(grid[id2])) m2++;
+                            }
+                            if (m1==0) { 
+                                QList<int> s=i1; std::sort(s.begin(), s.end());
+                                if(!state.usedPatterns["quina"].contains(s)) { won=true; prize.winnerPatterns[state.ticketId]=i1; }
+                            }
+                            if (!won && m2==0) {
+                                QList<int> s=i2; std::sort(s.begin(), s.end());
+                                if(!state.usedPatterns["quina"].contains(s)) { won=true; prize.winnerPatterns[state.ticketId]=i2; }
+                            }
+                            if (m1==1 || m2==1) nearWin = true;
                         }
-                        if (!won && m2==0) {
-                            QList<int> s=i2; std::sort(s.begin(), s.end());
-                            if(!state.usedPatterns["quina"].contains(s)) { won=true; prize.winnerPatterns[state.ticketId]=i2; }
-                        }
-                        if (m1==1 || m2==1) nearWin = true;
                     }
-                }
-            } else if (prize.tipo == "forma" || prize.tipo == "cheia") {
-                int missingCount = 0;
-                if (prize.tipo == "cheia") {
-                    missingCount = state.missingNumbers.size();
-                } else {
-                    for (int idx : prize.padraoIndices) {
-                        if (idx >= 0 && idx < grid.size()) {
-                            if (!m_drawnNumbers.contains(grid[idx])) missingCount++;
+                } else if (prize.tipo == "forma" || prize.tipo == "cheia") {
+                    int missingCount = 0;
+                    if (prize.tipo == "cheia") {
+                        missingCount = state.missingNumbers.size();
+                    } else {
+                        for (int idx : prize.padraoIndices) {
+                            if (idx >= 0 && idx < grid.size()) {
+                                if (!m_drawnNumbers.contains(grid[idx])) missingCount++;
+                            }
                         }
                     }
+                    if (missingCount == 0 && (prize.tipo == "cheia" || !prize.padraoIndices.isEmpty())) won = true;
+                    if (missingCount == 1) nearWin = true;
                 }
-                if (missingCount == 0 && (prize.tipo == "cheia" || !prize.padraoIndices.isEmpty())) won = true;
-                if (missingCount == 1) nearWin = true;
-            }
 
             if (won) {
                 if (!prize.winners.contains(state.ticketId)) {
@@ -210,6 +226,7 @@ bool BingoGameEngine::processNumber(int number)
                         state.usedPatterns["forma"].append(s);
                     } else if (prize.tipo == "cheia") {
                         state.usedPatterns["cheia"].append(QList<int>());
+                        if (!m_winners.contains(state.ticketId)) m_winners.append(state.ticketId);
                     }
                     qInfo() << "VITÓRIA! Ticket" << state.ticketId << "ganhou prêmio paralalelo/da vez:" << prize.id << prize.nome;
                     hasUpdates = true;
@@ -232,138 +249,21 @@ int BingoGameEngine::undoLastNumber()
         return -1;
     }
 
-    int lastNum = m_drawnNumbers.takeLast();
-
-    // Otimização: Apenas cartelas que possuem este numero
-    const QList<int> &targets = m_numToTickets[lastNum];
-
-    for (int ticketId : targets) {
-        if (!m_activeTickets.contains(ticketId)) continue;
-        TicketState &state = m_activeTickets[ticketId];
-
-        // Se o numero estava marcado (não estava no missing)
-        if (!state.missingNumbers.contains(lastNum)) {
-            state.missingNumbers.insert(lastNum);
-            int oldMatches = state.matches;
-            state.matches--;
-            
-            int newMissingCount = state.missingNumbers.size();
-            
-            // 1. Desfazer BINGO Global (Cartela Cheia)
-            if (oldMatches == state.totalNumbers) {
-                m_winners.removeAll(ticketId);
-                state.usedPatterns.remove("cheia"); // FIX: Permite ganhar cheia novamente
-            }
-
-            if (newMissingCount == 1) {
-                m_nearWins[1].append(ticketId);
-            } else if (newMissingCount <= 3) {
-                m_nearWins[newMissingCount - 1].removeAll(ticketId);
-                if (!m_nearWins[newMissingCount].contains(ticketId))
-                    m_nearWins[newMissingCount].append(ticketId);
-            } else if (newMissingCount == 4) {
-                m_nearWins[3].removeAll(ticketId);
-            }
-
-            // 2. Desfazer impacto nos Prêmios Customizados
-            const auto &grid = m_allTickets[ticketId - 1].grids[m_currentGridIndex];
-            
-            for (int pIdx = 0; pIdx < m_prizes.size(); ++pIdx) {
-                Prize &prize = m_prizes[pIdx];
-                if (!prize.active) continue;
-
-                bool stillWon = false;
-                bool nearWin = false;
-                int minMissing = 99;
-
-                if (prize.tipo == "quina") {
-                    int cols = 5;
-                    int rows = grid.size() / cols;
-                    
-                    // Horizontal
-                    for (int r = 0; r < rows; ++r) {
-                        int rowMiss = 0;
-                        for (int c = 0; c < cols; ++c) {
-                            if (!m_drawnNumbers.contains(grid[c * rows + r])) rowMiss++;
-                        }
-                        if (rowMiss < minMissing) minMissing = rowMiss;
-                    }
-                    // Vertical e Diagonais (SOMENTE if 5x5)
-                    if (rows == 5 && cols == 5) {
-                        // Vertical
-                        for (int c = 0; c < cols; ++c) {
-                            int colMiss = 0;
-                            for (int r = 0; r < rows; ++r) {
-                                if (!m_drawnNumbers.contains(grid[c * rows + r])) colMiss++;
-                            }
-                            if (colMiss < minMissing) minMissing = colMiss;
-                        }
-                        // Diagonais
-                        int d1 = 0, d2 = 0;
-                        for(int i=0; i<5; ++i) {
-                            if (!m_drawnNumbers.contains(grid[i*5 + i])) d1++;
-                            if (!m_drawnNumbers.contains(grid[i*5 + (4-i)])) d2++;
-                        }
-                        if (d1 < minMissing) minMissing = d1;
-                        if (d2 < minMissing) minMissing = d2;
-                    }
-                    
-                    if (minMissing == 0) stillWon = true;
-                    else if (minMissing == 1) nearWin = true;
-
-                } else if (prize.tipo == "forma" || prize.tipo == "cheia") {
-                    int prizeMissing = 0;
-                    if (prize.tipo == "cheia") {
-                        prizeMissing = state.missingNumbers.size();
-                    } else {
-                        if (prize.padraoIndices.isEmpty()) prizeMissing = 99;
-                        else {
-                            for (int idx : prize.padraoIndices) {
-                                if (idx >= 0 && idx < grid.size()) {
-                                    if (!m_drawnNumbers.contains(grid[idx])) prizeMissing++;
-                                }
-                            }
-                        }
-                    }
-                    if (prizeMissing == 0 && (prize.tipo == "cheia" || !prize.padraoIndices.isEmpty())) stillWon = true;
-                    else if (prizeMissing == 1) nearWin = true;
-                }
-
-                // Aplica mudanças no estado do prêmio e da cartela
-                if (!stillWon) {
-                    qInfo() << "[UNDO-DETAIL] Ticket" << ticketId << "deixou de meet criteria para prêmio" << prize.id << prize.nome << ". Removendo...";
-                    
-                    // SE NÃO GANHOU MAIS: Limpa o registro de vitória interna da cartela para este prêmio
-                    state.wonPrizeIds.remove(prize.id);
-                    int removedCount = prize.winners.removeAll(ticketId);
-                    prize.winnerPatterns.remove(ticketId);
-
-                    qInfo() << "[UNDO-DETAIL] Ticket" << ticketId << "removido de prize.winners. Ocorrências removidas:" << removedCount;
-
-                    // Limpa padrões usados especificamente para este prêmio/tipo
-                    if (prize.tipo == "quina") {
-                         state.usedPatterns.remove("quina");
-                    } else if (prize.tipo == "forma") {
-                         state.usedPatterns.remove("forma");
-                    } else if (prize.tipo == "cheia") {
-                         state.usedPatterns.remove("cheia");
-                    }
-                    
-                    qInfo() << "[UNDO-ENGINE] Ticket" << ticketId << "deixou de ganhar prêmio" << prize.id << "(" << prize.nome << ")";
-                } else {
-                    qDebug() << "[UNDO-DETAIL] Ticket" << ticketId << "ainda ganha prêmio" << prize.id << "com as bolas restantes.";
-                }
-
-                if (nearWin && !stillWon) {
-                    if (!prize.near_winners.contains(ticketId)) prize.near_winners.append(ticketId);
-                } else {
-                    prize.near_winners.removeAll(ticketId);
-                }
-            }
-        }
-    }
+    // Estratégia de Reset e Replay: Garante integridade absoluta de ganhadores, armados e turnos
+    QList<int> balls = m_drawnNumbers;
+    int lastNum = balls.takeLast();
     
-    qInfo() << "[UNDO-ENGINE] Sorteio atualizado. Última bola removida:" << lastNum << ". Restantes:" << m_drawnNumbers.size();
+    qInfo() << "[UNDO-ENGINE] Iniciando Replay para desfazer a bola" << lastNum;
+    
+    // 1. Reseta o motor para o estado zero (mantendo configurações e cartelas registradas)
+    startNewGame(); 
+    
+    // 2. Re-processa todas as bolas exceto a última
+    for (int n : balls) {
+        processNumber(n);
+    }
+
+    qInfo() << "[UNDO-ENGINE] Replay concluído. Bolas restantes:" << m_drawnNumbers.size();
     return lastNum;
 }
 
@@ -384,35 +284,42 @@ QMap<int, QList<int>> BingoGameEngine::getNearWinTickets() const
 
 void BingoGameEngine::registerTicket(int ticketId)
 {
-    if (m_registeredTickets.contains(ticketId)) return; // Já registrada
+    if (m_registeredTickets.contains(ticketId)) return; 
     m_registeredTickets.insert(ticketId);
 
-    // Inicializa a cartela para o jogo atual
-    int idx = ticketId - 1;
-    if (idx < 0 || idx >= m_allTickets.size()) return;
-    
-    const auto &ticket = m_allTickets[idx];
-    if (m_currentGridIndex < 0 || m_currentGridIndex >= ticket.grids.size()) return;
+    // Inicializa estados para este ticket em todas as bases requeridas pelos prêmios
+    for (const auto &prize : m_prizes) {
+        int bid = prize.baseId;
+        int gidx = prize.gridIndex;
+        if (!m_bases.contains(bid)) continue;
+        
+        QPair<int, int> key(bid, ticketId);
+        if (m_activeTickets.contains(key)) continue;
 
-    if (!m_activeTickets.contains(ticketId)) {
+        const auto &tickets = m_bases[bid];
+        int idx = ticketId - 1;
+        if (idx < 0 || idx >= tickets.size()) continue;
+        
+        const auto &ticket = tickets[idx];
+        if (gidx < 0 || gidx >= ticket.grids.size()) continue;
+
         TicketState state;
         state.ticketId = ticket.id;
+        state.baseId = bid;
         state.matches = 0;
-        const QVector<int> &grid = ticket.grids[m_currentGridIndex];
+        const QVector<int> &grid = ticket.grids[gidx];
         state.totalNumbers = grid.size();
         
         for(int n : grid) {
-            // Se o numero já foi sorteado, já conta como marcado!
             if (m_drawnNumbers.contains(n)) {
                 state.matches++;
             } else {
                 state.missingNumbers.insert(n);
             }
-            m_numToTickets[n].append(ticket.id);
+            m_numToTicketsByBase[bid][n].append(ticket.id);
         }
         
-        m_activeTickets.insert(ticket.id, state);
-        // qDebug() << "Ticket" << ticketId << "ativado tardiamente com" << state.matches << "matches iniciais.";
+        m_activeTickets.insert(key, state);
     }
 }
 
@@ -428,26 +335,51 @@ void BingoGameEngine::clearRegisteredTickets()
 
 QString BingoGameEngine::getFormattedBarcode(int ticketId) const
 {
-    int digit = m_idToDigit.value(ticketId, 0);
+    // Se não especificado base, busca na primeira base que contém o ticket
+    int digit = 0;
+    for (auto it = m_idToDigitByBase.begin(); it != m_idToDigitByBase.end(); ++it) {
+        if (it.value().contains(ticketId)) {
+            digit = it.value().value(ticketId);
+            break;
+        }
+    }
     // Formato: 6 digitos para ID + 1 digito para CD = 7 total
     return QString("%1%2").arg(ticketId, 6, 10, QChar('0')).arg(digit);
 }
 
-bool BingoGameEngine::isValidCheckDigit(int ticketId, int checkDigit) const
+QVector<int> BingoGameEngine::getTicketNumbers(int baseId, int ticketId) const
 {
-    return m_idToDigit.contains(ticketId) && m_idToDigit.value(ticketId) == checkDigit;
+    if (m_bases.contains(baseId)) {
+        const auto &tickets = m_bases[baseId];
+        int idx = ticketId - 1;
+        if (idx >= 0 && idx < tickets.size()) {
+            // Retorna a união de todos os números de todas as grades deste ticket nesta base?
+            // Ou apenas da grade "atual" (m_currentGridIndex)?
+            // Para o visual da cartela, o melhor é retornar os números da grade que o prêmio ativo ou gridIndex define.
+            // Aqui vamos retornar a 1ª grade por padrão, ou a que tiver números.
+            const auto &grids = tickets[idx].grids;
+            if (!grids.isEmpty()) {
+                // Se o currentGridIndex for válido para este ticket, usa ele
+                if (m_currentGridIndex >= 0 && m_currentGridIndex < grids.size())
+                    return grids[m_currentGridIndex];
+                return grids.first();
+            }
+        }
+    }
+    return {};
 }
 
-QVector<int> BingoGameEngine::getTicketNumbers(int ticketId) const
+bool BingoGameEngine::isValidCheckDigit(int ticketId, int checkDigit) const
 {
-    int idx = ticketId - 1;
-    if (idx < 0 || idx >= m_allTickets.size()) return {};
-    
-    const auto &ticket = m_allTickets[idx];
-    if (m_currentGridIndex < 0 || m_currentGridIndex >= ticket.grids.size()) return {};
-    
-    return ticket.grids[m_currentGridIndex];
+    for (auto it = m_idToDigitByBase.begin(); it != m_idToDigitByBase.end(); ++it) {
+        if (it.value().contains(ticketId)) {
+            if (it.value().value(ticketId) == checkDigit) return true;
+        }
+    }
+    return false;
 }
+
+// Deletado: getTicketNumbers(int ticketId) legado
 
 void BingoGameEngine::addPrize(const Prize &prize)
 {

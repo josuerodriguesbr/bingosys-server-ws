@@ -51,12 +51,22 @@ erDiagram
         timestamp usado_em
     }
 
-    PREMIACOES {
+    RODADAS {
         integer id PK
         integer sorteio_id FK
-        varchar nome_premio
+        varchar nome_rodada
+        integer base_id FK
+        jsonb configuracoes
+        integer ordem_exibicao
+    }
+
+    PREMIOS {
+        integer id PK
+        integer rodada_id FK
         varchar tipo
+        varchar descricao
         jsonb padrao_grade
+        boolean realizada
         integer ordem_exibicao
     }
 
@@ -65,7 +75,9 @@ erDiagram
     SORTEIOS ||--o{ BOLAS_SORTEADAS : "possui"
     SORTEIOS ||--o{ CARTELAS_VALIDADAS : "contem"
     SORTEIOS ||--o{ CHAVES_ACESSO : "autoriza"
-    SORTEIOS ||--o{ PREMIACOES : "premia"
+    SORTEIOS ||--o{ RODADAS : "contém"
+    RODADAS ||--o{ PREMIOS : "possui regras de"
+    BASES_DADOS ||--o{ RODADAS : "vinculada a"
 ```
 
 ## Descrição das Tabelas
@@ -76,4 +88,5 @@ erDiagram
 - **BOLAS_SORTEADAS**: Histórico das bolas chamadas em cada sorteio específico.
 - **CARTELAS_VALIDADAS**: Registro das cartelas vendidas/validadas para um sorteio.
 - **CHAVES_ACESSO**: Chaves (Tokens) para login de operadores e participantes.
-- **PREMIACOES**: Definição dos prêmios (Quinas, Formas, Bingo) vinculados a cada sorteio.
+- **RODADAS**: Grupos de premiação (ex: Rodada 1) que podem usar bases de cartelas específicas.
+- **PREMIOS**: Regras específicas de vitória (Quina, Forma, Bingo) vinculadas a uma rodada.

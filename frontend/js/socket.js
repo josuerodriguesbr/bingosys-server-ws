@@ -112,7 +112,7 @@ class BingoSocket {
 // Assuming localhost for now or dynamic
 const getServerUrl = () => {
     // Se estiver rodando local file, assume o IP do notebook (servidor local temporário)
-    if (window.location.protocol === 'file:') return 'ws://192.168.1.107:3000';
+    if (window.location.protocol === 'file:') return 'ws://192.168.1.107:3001';
 
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
     const host = window.location.host;

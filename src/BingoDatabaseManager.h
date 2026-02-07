@@ -8,6 +8,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QVariantList>
+#include <QDate>
+#include <QTime>
 
 class BingoDatabaseManager : public QObject
 {
@@ -27,12 +29,13 @@ public:
     QJsonArray listarTodasChavesAcesso();
     QJsonArray listarModelos();
     QJsonArray listarBases();
-    int criarSorteioComChave(int modeloId, int baseId, const QString &chave);
+    int criarSorteioComChave(int modeloId, const QString &chave, const QDate &data = QDate(), const QTime &horaInicio = QTime(), const QTime &horaFim = QTime());
 
     // Sorteios (Individuais)
     QJsonObject getSorteio(int sorteioId);
     bool atualizarStatusSorteio(int sorteioId, const QString &status);
-    bool atualizarConfigSorteio(int sorteioId, int modeloId, int baseId, const QJsonObject &preferencias);
+    bool atualizarConfigSorteio(int sorteioId, int modeloId, const QJsonObject &configuracoes = QJsonObject());
+    bool atualizarAgendamentoSorteio(int sorteioId, const QDate &data, const QTime &horaInicio, const QTime &horaFim);
     bool salvarSorteioComoModelo(const QString &nome, const QJsonObject &config);
     bool salvarBolaSorteada(int sorteioId, int numero);
     bool removerUltimaBola(int sorteioId, int numero);
@@ -44,11 +47,13 @@ public:
     QList<int> getCartelasValidadas(int sorteioId);
     QList<int> getCartelasPorTelefone(int sorteioId, const QString &telefone);
 
-    // Premiações
-    QJsonArray getPremiacoes(int sorteioId);
-    bool addPremiacao(int sorteioId, const QString &nome, const QString &tipo, const QJsonArray &padrao = QJsonArray(), int ordem = 0);
-    bool removerPremiacao(int premioId);
-    bool atualizarStatusPremiacao(int premioId, bool realizada);
+    // Rodadas e Prêmios
+    QJsonArray getRodadas(int sorteioId);
+    int addRodada(int sorteioId, const QString &nome, int baseId, const QJsonObject &configuracoes = QJsonObject(), int ordem = 0);
+    bool addPremio(int rodadaId, const QString &tipo, const QString &descricao, const QJsonArray &padrao = QJsonArray(), int ordem = 0);
+    bool removerRodada(int rodadaId);
+    bool removerPremio(int premioId);
+    bool atualizarStatusPremio(int premioId, bool realizada);
 
 private:
     QSqlDatabase m_db;

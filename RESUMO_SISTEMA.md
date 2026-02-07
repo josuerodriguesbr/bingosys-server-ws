@@ -26,7 +26,8 @@ O **BingoSys** é uma plataforma de alta performance desenvolvida para gerenciar
 *   **Gestão de Sessões:** Sistema de chaves de acesso (Tokens) que vinculam operadores e participantes aos seus respectivos sorteios.
 
 ### Sistema de Premiações Avançado
-*   **Prêmios Flexíveis:** Suporte a **Cartela Cheia**, **Quina** (Horizontal, Vertical, Diagonal) e **Formas Customizadas** (desenhadas livremente num grid interativo).
+*   **Rodadas Estruturadas:** Suporte a múltiplas rodadas por sorteio, permitindo que cada rodada utilize uma base de cartelas diferente (ex: Rodada 1 com 75x15, Rodada Especial com 75x25).
+*   **Prêmios Flexíveis:** Cada rodada pode conter múltiplos prêmios com regras independentes: **Cartela Cheia**, **Quina** (Horizontal, Vertical, Diagonal) e **Formas Customizadas** (desenhadas livremente num grid interativo).
 *   **Detecção Automática:** O motor calcula vencedores em milissegundos a cada bola sorteada.
 *   **Visualização Diferenciada:**
     *   🏆 **Laranja:** Ganhadores de Quina.

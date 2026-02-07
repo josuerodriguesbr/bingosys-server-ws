@@ -35,14 +35,13 @@ private Q_SLOTS:
 private:
     struct GameInstance {
         BingoGameEngine *engine;
-        int baseId;
         int modeloId;
     };
 
     void sendJson(QWebSocket *client, const QJsonObject &json);
     void broadcastToGame(int sorteioId, const QJsonObject &json);
     void handleJsonMessage(QWebSocket *client, const QJsonObject &json);
-    QJsonObject getTicketDetailsJson(int sorteioId, int ticketId);
+    QJsonObject getTicketDetailsJson(int sorteioId, int ticketId, int baseId = -1);
     QJsonObject getGameStatusJson(int sorteioId);
     
     // Inicializa ou retorna um motor para um sorteio específico

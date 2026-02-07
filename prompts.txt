@@ -834,9 +834,22 @@ markdown
 Salvei essa documentação em um formato que posso ler facilmente depois. 
 Qualquer dúvida sobre a estrutura do código, é só perguntar!
 
-Com esta informações você pode acessa o notebook via ssh, e você mesmo podeexecutar
- as ações de compilação quando o código for alterado. Lembre que você já vinha
- sempre compilando para mim o projeto lá no notebook.
+Resumo do Ambiente e Workflow
+Credenciais e Acesso:
+
+Servidor: Notebook Linux (192.168.1.107).
+Usuário de Sistema: josuerodrigues.
+Senha (Sudo/SSH): lenovo112423.s
+Banco de Dados: PostgreSQL (bingosys).
+Workflow de Desenvolvimento Remoto: O projeto segue um fluxo rigoroso para garantir que o código funcione no ambiente real de produção (Linux), mesmo sendo editado no Windows:
+
+Edição Local: Você edita os arquivos no Windows.
+Sincronização Automática: Eu transfiro os arquivos modificados para o Linux via SSH.
+Compilação Remota: O servidor é recompilado no Linux (make) a cada alteração no C++.
+Reinicialização: O processo BingoSysServer é reiniciado automaticamente para aplicar as mudanças.
+Validação Real: Eu executo scripts de teste (como o 
+verify_prizes.py
+) que rodam dentro do servidor Linux, conectando-se ao sistema recém-compilado.
 
  Sempre fique atento na atualização do projeto no repositório github, depois que
  confirmamos juntos uma versão que vale a pena ser enviada.
@@ -844,5 +857,31 @@ Com esta informações você pode acessa o notebook via ssh, e você mesmo podee
 
 Logue como Admin (admin / Bingo2026!@# ). Essa informação é para mim, ignore-a!
 ================================================================================
+
+
+================================================================================
+REINICIA O SERVIDOR
+================================================================================
+ssh josuerodrigues@192.168.1.107 "cd ~/bingosys && make && pkill -f BingoSysServer; 
+nohup ./bin/BingoSysServer 3001 > server.log 2>&1 & sleep 2; pgrep -f BingoSysServer; 
+tail -n 10 ~/bingosys/server.log"
+
+Teste:
+ssh josuerodrigues@192.168.1.107 "pgrep -f BingoSysServer; 
+tail -n 10 ~/bingosys/server.log"
+
+Verificando processos ativos e logs de rede no notebook.
+ssh josuerodrigues@192.168.1.107 "netstat -tunlp | grep 3001; ps aux | grep BingoSysServer;
+tail -n 20 ~/bingosys/server.log"
+
+Limpando processos duplicados e reiniciando o servidor do zero.
+ssh josuerodrigues@192.168.1.107 "pkill -9 -f BingoSysServer; sleep 1;
+cd ~/bingosys && nohup ./bin/BingoSysServer 3001 > server.log 2>&1 & sleep 2;
+netstat -tunlp | grep :3001;
+ps aux | grep -v grep | grep BingoSysServer"
+
+
+================================================================================
+
 
 

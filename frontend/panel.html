@@ -794,11 +794,10 @@
             background: rgba(0, 0, 0, 0.3);
             border-radius: var(--radius-lg);
             padding: 1rem;
-            margin-top: auto;
         }
 
-        /* Prize/Shape Editor Styles */
-        .prize-item {
+        /* Rodada/Shape Editor Styles */
+        .rodada-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -889,7 +888,7 @@
             <button id="btn-invite" onclick="copyInviteLink()" class="nav-btn"
                 style="border-color: #10b981; color: #10b981;">🔗 CONVITE</button>
             <a href="vendas.html" id="btn-sales" class="nav-btn">🛒 VENDAS</a>
-            <button id="btn-prizes" onclick="openPrizes()" class="nav-btn">🏆 PREMIAÇÕES</button>
+            <button id="btn-rodadas" onclick="openRodadas()" class="nav-btn">🏆 RODADAS</button>
             <button id="btn-settings" onclick="openSettings()" class="nav-btn">⚙️ CONFIGURAÇÕES</button>
             <button onclick="logout()" class="nav-btn" style="color: var(--danger)">🚪 SAIR</button>
         </div>
@@ -994,19 +993,15 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Base de Dados</label>
-                <select id="cfg-base" class="form-select">
-                    <!-- Dinamicamente preenchido -->
-                </select>
+                <label class="form-label">Data do Sorteio</label>
+                <input type="date" id="cfg-data-sorteio" class="form-input">
             </div>
 
             <div class="form-group">
-                <label class="form-label">Quantidade de Chances</label>
-                <input type="number" id="cfg-chances" class="form-input" value="1" min="1" max="10">
-                <small style="color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.25rem; display: block;">
-                    Um bip registrará esta quantidade de cartelas em sequência.
-                </small>
+                <label class="form-label">Horário de Início</label>
+                <input type="time" id="cfg-hora-inicio" class="form-input">
             </div>
+
 
             <div class="form-group">
                 <label class="form-label">Limite de Histórico (Público)</label>
@@ -1025,49 +1020,95 @@
         </div>
     </div>
 
-    <!-- Modal Prizes -->
-    <div id="modal-prizes" class="modal-overlay">
+    <!-- Modal Rodadas -->
+    <div id="modal-rodadas" class="modal-overlay">
         <div class="modal-card" style="width: 500px; max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
-                <div class="modal-title">Gestão de Premiações</div>
-                <button onclick="closePrizes()"
+                <div class="modal-title">Gestão de Rodadas</div>
+                <button onclick="closeRodadas()"
                     style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
 
             <div style="margin-bottom: 1.5rem;">
-                <div class="section-title" style="font-size: 0.9rem;">Prêmios Ativos</div>
-                <div id="prizes-list-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
-                    <!-- Lista de prêmios dinamicamente aqui -->
+                <div class="section-title" style="font-size: 0.9rem;">Rodadas Ativas</div>
+                <div id="rodadas-list-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+                    <!-- Lista de rodadas dinamicamente aqui -->
                 </div>
             </div>
 
-            <div class="section-title" style="font-size: 0.9rem;">Adicionar Novo Prêmio</div>
+            <div class="section-title" style="font-size: 0.9rem;">Configuração Geral da Rodada</div>
             <div class="form-group">
-                <label class="form-label">Descrição do Prêmio</label>
-                <input type="text" id="prz-nome" class="form-input" placeholder="Ex: TV 50 Pol, Geladeira...">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Tipo de Vitória</label>
-                <select id="prz-tipo" class="form-select" onchange="togglePrizeEditor(this.value)">
-                    <option value="quina">Quina (Horizontal, Vertical ou Diag)</option>
-                    <option value="forma">Forma (Desenho Customizado)</option>
-                    <option value="cheia">Cartela Cheia (Bingo)</option>
-                </select>
+                <label class="form-label">Nome da Rodada</label>
+                <input type="text" id="prz-nome" class="form-input" placeholder="Ex: Rodada 1, Especial, Moto...">
             </div>
 
-            <div id="prz-shape-editor" class="shape-editor-container" style="display: none;">
-                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Clique no grid para
-                    desenhar o padrão:</div>
-                <div id="shape-grid" class="shape-editor-grid">
-                    <!-- Gerado via JS -->
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div style="flex: 2;">
+                    <label class="form-label">Base de Cartelas</label>
+                    <select id="prz-base" class="form-select" onchange="updateShapeGridFromBase()">
+                        <!-- Dinamicamente preenchido -->
+                    </select>
                 </div>
-                <button onclick="clearShapeGrid()" class="nav-btn"
-                    style="font-size: 0.7rem; padding: 0.3rem 0.6rem;">Limpar Grade</button>
+                <!-- Chances agora podem ser por prêmio ou rodada, mantendo por enquanto se necessário -->
+                <div style="flex: 1;">
+                    <label class="form-label">Bips/Chances</label>
+                    <input type="number" id="prz-chances" class="form-input" value="1" min="1" max="10">
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 1rem 0;">
+
+            <div class="section-title" style="font-size: 0.9rem;">Regras de Vitória (Prêmios)</div>
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Tipo de Vitória</label>
+                    <select id="prz-tipo" class="form-select" onchange="togglePrizeEditor(this.value)">
+                        <option value="quina">Quina (Horizontal, Vertical ou Diag)</option>
+                        <option value="forma">Forma (Desenho Customizado)</option>
+                        <option value="cheia">Cartela Cheia (Bingo)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição da Regra (Opcional)</label>
+                    <input type="text" id="prz-desc-rule" class="form-input"
+                        placeholder="Ex: 1ª Quina, Moto 0km, R$ 500...">
+                </div>
+
+                <div id="prz-shape-editor" class="shape-editor-container" style="display: none; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Clique no grid
+                        para desenhar o padrão:</div>
+                    <div id="shape-grid" class="shape-editor-grid">
+                        <!-- Gerado via JS -->
+                    </div>
+                    <button onclick="clearShapeGrid()" class="nav-btn"
+                        style="font-size: 0.7rem; padding: 0.3rem 0.6rem; margin-top: 5px;">Limpar Grade</button>
+                </div>
+
+                <button onclick="adicionarRegraALista()" class="nav-btn"
+                    style="width: 100%; justify-content: center; font-size: 0.8rem; border-style: dashed;">
+                    <span style="font-size: 1.2rem; margin-right: 5px;">+</span> Adicionar Regra
+                </button>
+            </div>
+
+            <div id="prizes-list-container" style="margin-bottom: 1rem;">
+                <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; color: var(--text-secondary); border-bottom: 1px solid #334155;">
+                            <th style="padding: 5px;">Tipo</th>
+                            <th style="padding: 5px;">Detalhes</th>
+                            <th style="padding: 5px; text-align: right;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sub-prizes-tbody">
+                        <!-- Regras adicionadas aparecem aqui -->
+                    </tbody>
+                </table>
             </div>
 
             <div class="modal-footer">
-                <button onclick="closePrizes()" class="nav-btn">Fechar</button>
-                <button onclick="saveNewPrize()" class="nav-btn primary">Adicionar à Lista</button>
+                <button onclick="closeRodadas()" class="nav-btn">Fechar</button>
+                <button onclick="saveFullRodada()" class="nav-btn primary">Salvar Rodada Completa</button>
             </div>
         </div>
     </div>
@@ -1168,7 +1209,7 @@
                 document.getElementById('btn-sales').style.display = 'block';
                 document.getElementById('btn-settings').style.display = 'block';
                 document.getElementById('btn-invite').style.display = 'block';
-                if (document.getElementById('btn-prizes')) document.getElementById('btn-prizes').style.display = 'block';
+                if (document.getElementById('btn-rodadas')) document.getElementById('btn-rodadas').style.display = 'block';
 
                 document.getElementById('section-boa').style.display = 'block';
                 document.getElementById('section-my-tickets').style.display = 'none';
@@ -1204,14 +1245,11 @@
 
         bingoSocket.on('server_debug_report', (data) => {
             console.group("🚀 RELATÓRIO DE DEPURAÇÃO DO SERVIDOR");
-            console.table(data.prizes.map(p => ({
-                ID: p.id,
-                Nome: p.nome,
-                Tipo: p.tipo,
-                Ativo: p.active,
-                Realizado: p.realizada,
-                "Na Vez?": p.isTurnPrize ? "SIM" : "não",
-                Ganhadores: p.winnersCount
+            console.table(data.rodadas.map(r => ({
+                ID: r.id,
+                Nome: r.nome,
+                Base: r.base_id,
+                Prêmios: r.premios.length
             })));
             console.log("Estado Geral:", {
                 BolasSorteada: data.drawnCount,
@@ -1251,19 +1289,27 @@
         }
 
         bingoSocket.on('sync_status', (data) => {
+            console.log("Sync Status recebido:", data);
+
             // Sincroniza vendas
             const elPlaying = document.getElementById('playing-count');
-            if (elPlaying) elPlaying.textContent = data.totalRegistered + " CARTELAS EM JOGO";
+            if (elPlaying) elPlaying.textContent = (data.totalRegistered || 0) + " CARTELAS EM JOGO";
 
             // Sincroniza bolas
             drawnNumbers = data.drawnNumbers || [];
             updateTotalBallsCounter();
+
+            // Reconstrói histórico completo (sem limite de 10 a menos que configurado)
             elHistory.innerHTML = "";
-            drawnNumbers.forEach(num => {
+            const limit = (data.historyLimit || (config && config.historyLimit)) ? (data.historyLimit || config.historyLimit) : 99;
+
+            // Mostra os últimos N bolas
+            const ballsToShow = [...drawnNumbers].reverse().slice(0, limit);
+            ballsToShow.forEach(num => {
                 const ball = document.createElement('div');
-                ball.className = 'ball animate-fade-in'; // Usando classe consistente
+                ball.className = 'ball animate-fade-in';
                 ball.textContent = num < 10 ? '0' + num : num;
-                elHistory.insertBefore(ball, elHistory.firstChild);
+                elHistory.appendChild(ball); // Já está invertido pelo slice
             });
 
             if (drawnNumbers.length > 0) {
@@ -1273,9 +1319,13 @@
                 elCurrentBall.textContent = "--";
             }
 
-            // Sincroniza listas (Usa aggregateWinners para juntar todos)
+            // Sincroniza Ganhadores
+            // Se o server mandou engine_premios_status, usamos ele para agregar
+            if (data.engine_premios_status) enginePremiosStatus = data.engine_premios_status;
+
             lastWinners = aggregateWinners(data);
             updateWinners(lastWinners);
+
             if (data.near_wins) {
                 lastNearWins = data.near_wins;
                 updateNearWins(lastNearWins);
@@ -1294,11 +1344,22 @@
             }
 
             isGameFinished = !!data.isFinished;
-            isDrawing = false;
+            isDrawing = false; // DESBLOQUEIA TRAVA DE SEGURANÇA
             updateResetButtonState();
+
+            if (data.rodadas) {
+                currentRodadas = data.rodadas;
+                renderRodadaList();
+            }
 
             renderMyTickets();
             updateConfigBadge();
+
+            // Atualiza status do sorteio no topo
+            const statusBadge = document.getElementById('mode-display');
+            if (statusBadge) {
+                statusBadge.textContent = isGameFinished ? "Sorteio Concluído" : (drawnNumbers.length > 0 ? "Sorteio Em Andamento" : "Pronto para Iniciar");
+            }
         });
 
         bingoSocket.on('config_updated', (data) => {
@@ -1332,6 +1393,12 @@
             updateResetButtonState();
 
             renderMyTickets();
+        });
+
+        bingoSocket.on('undo_last_response', (data) => {
+            console.log("Undo last response:", data);
+            isDrawing = false;
+            updateResetButtonState();
         });
 
         bingoSocket.on('number_cancelled', (data) => {
@@ -1478,7 +1545,7 @@
         function updateWinners(winners) {
             lastWinners = winners || [];
             elListWinners.innerHTML = "";
-            let toShow = [...lastWinners];
+            let toShow = [...lastWinners].reverse();
 
             elMoreWinners.style.display = 'none';
 
@@ -1551,9 +1618,10 @@
                 map.get(ticket.ticketId).allPrizes.push(prizeInfo);
             };
 
-            // 2. Prêmios Customizados (Unificada - Quinas, Formas e Cheias via Turno Global)
-            if (data.prizes && Array.isArray(data.prizes)) {
-                data.prizes.forEach(p => {
+            // 1. Prêmios vindo do Motor (Real-time - Nova Estrutura)
+            const engineStatus = data.engine_premios_status || data.engine_prizes_status;
+            if (engineStatus && Array.isArray(engineStatus)) {
+                engineStatus.forEach(p => {
                     if (p.winners && Array.isArray(p.winners)) {
                         p.winners.forEach(w => {
                             add(w, {
@@ -1561,12 +1629,47 @@
                                 name: p.nome,
                                 turn: '1',
                                 winnersCount: p.winners.length,
-                                padrao: w.padrao || p.padrao // Tenta o padrão da cartela (quina) ou prêmio (forma)
+                                padrao: w.padrao || p.padrao
                             });
                         });
                     }
                 });
             }
+
+            // 2. Prêmios da estrutura principal (Fall-back de Rodadas)
+            if (map.size === 0 && data.rodadas && Array.isArray(data.rodadas)) {
+                data.rodadas.forEach(rodada => {
+                    if (rodada.premios && Array.isArray(rodada.premios)) {
+                        rodada.premios.forEach(p => {
+                            if (p.winners && Array.isArray(p.winners)) {
+                                p.winners.forEach(w => {
+                                    add(w, {
+                                        type: p.tipo,
+                                        name: rodada.nome + " - " + p.tipo.toUpperCase(),
+                                        turn: '1',
+                                        winnersCount: p.winners.length,
+                                        padrao: w.padrao || p.padrao
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            // 3. Fallback final para ganhadores globais (Bingo Cheio)
+            if (map.size === 0 && data.winners && Array.isArray(data.winners)) {
+                data.winners.forEach(w => {
+                    add(w, {
+                        type: 'cheia',
+                        name: 'BINGO CHEIO',
+                        turn: '1',
+                        winnersCount: data.winners.length,
+                        padrao: w.padrao
+                    });
+                });
+            }
+
             return Array.from(map.values());
         }
 
@@ -1582,20 +1685,23 @@
                 });
             }
 
-            // 2. Prêmios Customizados (near_winners)
-            if (data.prizes && Array.isArray(data.prizes)) {
-                data.prizes.forEach(p => {
-                    if (p.near_winners && Array.isArray(p.near_winners)) {
-                        let formatted = p.near_winners.map(w => {
-                            let o = { ...w };
-                            o.winType = p.tipo;
-                            o.prizeName = p.nome;
-                            return o;
+            // 2. Prêmios Customizados (vindo das rodadas/premios)
+            if (data.rodadas && Array.isArray(data.rodadas)) {
+                data.rodadas.forEach(r => {
+                    if (r.premios && Array.isArray(r.premios)) {
+                        r.premios.forEach(p => {
+                            if (p.near_winners && Array.isArray(p.near_winners)) {
+                                let formatted = p.near_winners.map(w => {
+                                    let o = { ...w };
+                                    o.winType = p.tipo;
+                                    o.prizeName = r.nome + " (" + p.tipo.toUpperCase() + ")";
+                                    return o;
+                                });
+                                // Agrupa tudo sob a chave do tipo
+                                if (!byType[p.tipo]) byType[p.tipo] = [];
+                                byType[p.tipo] = byType[p.tipo].concat(formatted);
+                            }
                         });
-                        // Agrupa tudo sob uma chave, ou mescla?
-                        // Vamos mesclar tudo numa lista única de "Falta 1"
-                        if (!byType["custom"]) byType["custom"] = [];
-                        byType["custom"] = byType["custom"].concat(formatted);
                     }
                 });
             }
@@ -1603,13 +1709,15 @@
         }
 
         function updateNearWins(nearWinsData) {
-            // Suporta formato antigo (objeto direto) ou novo (aggregated)
-            // Se veio do socket direto:
+            // Suporta o novo formato de objeto agregado por tipo
             let list = [];
 
-            // Se já foi processado por aggregateNearWins:
-            if (nearWinsData.cheia) list = list.concat(nearWinsData.cheia);
-            if (nearWinsData.custom) list = list.concat(nearWinsData.custom);
+            // Se nearWinsData for o objeto resultante de aggregateNearWins, percorremos todas as chaves (cheia, quina, forma, etc)
+            Object.keys(nearWinsData).forEach(type => {
+                if (Array.isArray(nearWinsData[type])) {
+                    list = list.concat(nearWinsData[type]);
+                }
+            });
 
             // Filtro de unicidade (uma cartela pode faltar 1 para quina E bingo)
             // Prioridade visual? Se faltar 1 pra bingo e quina, mostra qual?
@@ -1682,6 +1790,47 @@
             return html;
         }
 
+        function renderBoard() {
+            // Atualiza grid de 1 a 75
+            // (implementação opcional se houver grid visual de todos os números na tela principal, 
+            // mas o foco aqui é o histórico e a bola atual)
+
+            // 1. Atualiza Última Bola
+            if (drawnNumbers.length > 0) {
+                const last = drawnNumbers[drawnNumbers.length - 1];
+                elCurrentBall.textContent = last.toString().padStart(2, '0');
+                elCurrentBall.classList.remove('animate-pop-in');
+                void elCurrentBall.offsetWidth; // trigger reflow
+                elCurrentBall.classList.add('animate-pop-in');
+            } else {
+                elCurrentBall.textContent = "--";
+                elCurrentBall.classList.remove('animate-pop-in');
+            }
+
+            // 2. Atualiza Histórico
+            elHistory.innerHTML = "";
+            // Mostra os últimos N (historyLimit) invertidos
+            const limit = (config.preferencias && config.preferencias.historyLimit) ? config.preferencias.historyLimit : 10;
+            const history = drawnNumbers.slice().reverse().slice(0, limit);
+
+            history.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'history-ball';
+                ball.textContent = num.toString().padStart(2, '0');
+                elHistory.appendChild(ball);
+            });
+
+            // 3. Atualiza contador de bolas
+            const countEl = document.querySelector('.balls-count-number'); // Ajuste conforme seu HTML
+            if (countEl) countEl.textContent = drawnNumbers.length;
+
+            // Atualiza status do sorteio no topo se existir
+            const statusBadge = document.getElementById('mode-display');
+            if (statusBadge) {
+                statusBadge.textContent = `Sorteio #${drawnNumbers.length > 0 ? "Em Andamento" : "Pronto"}`;
+            }
+        }
+
         function resetBoard() {
             drawnNumbers = [];
             elHistory.innerHTML = "";
@@ -1710,10 +1859,8 @@
         }
 
         bingoSocket.on('draw_config_response', (data) => {
-            console.log("draw_config_response recebido:", JSON.stringify(data));
+            console.log("draw_config_response recebido");
             const d = data.draw;
-            console.log("draw object:", JSON.stringify(d));
-            console.log("tipo_grade do draw:", d ? d.tipo_grade : "draw é null");
 
             const modelSelect = document.getElementById('cfg-modelo');
             const baseSelect = document.getElementById('cfg-base');
@@ -1721,39 +1868,39 @@
             modelosCache = data.modelos || [];
             basesCache = data.bases || [];
 
-            if (modelSelect) modelSelect.innerHTML = modelosCache.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
-            if (baseSelect) {
-                baseSelect.innerHTML = basesCache.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
-                console.log("Select Base preenchido com", basesCache.length, "itens. Tentando selecionar ID:", d.base_id);
-                baseSelect.value = d.base_id;
+            // Preenche seletor de base no modal de configurações (REMOVIDO, agora é por prêmio)
+            // if (baseSelect) { ... }
 
-                // Fallback caso não selecione (ex: tipagem String vs Int)
-                if (baseSelect.value == "" && d.base_id) {
-                    Array.from(baseSelect.options).forEach(opt => {
-                        if (opt.value == d.base_id) baseSelect.value = opt.value;
-                    });
+            // Preenche seletor de base no modal de premiações
+            const przBaseSelect = document.getElementById('prz-base');
+            if (przBaseSelect) {
+                // Salva a seleção atual antes de reconstruir
+                const currentVal = przBaseSelect.value;
+                przBaseSelect.innerHTML = basesCache.map(b => `<option value="${b.id}">${b.nome} (${b.tipo})</option>`).join('');
+                // Restaura se possível, senão fica no primeiro
+                if (currentVal && basesCache.some(b => b.id == currentVal)) {
+                    przBaseSelect.value = currentVal;
                 }
             }
 
             if (modelSelect) modelSelect.value = d.modelo_id;
 
+            // Preenche agendamento
+            if (document.getElementById('cfg-data-sorteio')) document.getElementById('cfg-data-sorteio').value = d.data_sorteio || "";
+            if (document.getElementById('cfg-hora-inicio')) document.getElementById('cfg-hora-inicio').value = d.hora_inicio || "";
+
             // Atualiza tipo_grade no config global
             if (d && d.tipo_grade) {
                 config.tipo_grade = d.tipo_grade;
-                console.log("Config tipo_grade EFETIVAMENTE atualizado para:", config.tipo_grade);
-
                 // Recria o grid de formas se o editor estiver visível
                 const shapeEditor = document.getElementById('prz-shape-editor');
                 if (shapeEditor && shapeEditor.style.display !== 'none') {
-                    console.log("Recriando shape grid com tipo_grade:", config.tipo_grade);
                     createShapeGrid();
                 }
-            } else {
-                console.warn("tipo_grade NÃO encontrado na resposta do servidor!");
             }
 
             const p = d ? d.preferencias || {} : {};
-            if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = p.numChances || 1;
+            // if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = p.numChances || 1;
             if (document.getElementById('cfg-history-limit')) document.getElementById('cfg-history-limit').value = p.historyLimit || 10;
         });
 
@@ -1761,7 +1908,7 @@
             const m = modelosCache.find(mod => mod.id == id);
             if (m && m.config) {
                 if (document.getElementById('cfg-history-limit')) document.getElementById('cfg-history-limit').value = m.config.historyLimit || 10;
-                if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = m.config.numChances || 1;
+                // if (document.getElementById('cfg-chances')) document.getElementById('cfg-chances').value = m.config.numChances || 1;
             }
         }
 
@@ -1770,8 +1917,8 @@
             if (!nome) return;
 
             const config = {
-                historyLimit: parseInt(document.getElementById('cfg-history-limit').value),
-                numChances: parseInt(document.getElementById('cfg-chances').value)
+                historyLimit: parseInt(document.getElementById('cfg-history-limit').value)
+                // numChances removido daqui, agora é por prêmio
             };
 
             bingoSocket.send('save_as_template', { nome, config });
@@ -1780,17 +1927,17 @@
 
         function saveSettings() {
             const modeloId = parseInt(document.getElementById('cfg-modelo').value);
-            const baseId = parseInt(document.getElementById('cfg-base').value);
-            const numChances = parseInt(document.getElementById('cfg-chances').value);
+            const data = document.getElementById('cfg-data-sorteio').value;
+            const horaInicio = document.getElementById('cfg-hora-inicio').value;
             const historyLimit = parseInt(document.getElementById('cfg-history-limit').value);
 
-            console.log("[DEBUG] Salvando Preferências:", { modeloId, baseId, numChances, historyLimit });
+            console.log("[DEBUG] Salvando Configurações:", { modeloId, data, horaInicio, historyLimit });
 
             bingoSocket.send("update_config", {
                 modelo_id: modeloId,
-                base_id: baseId,
+                data: data,
+                hora_inicio: horaInicio,
                 preferencias: {
-                    numChances: numChances,
                     historyLimit: historyLimit
                 }
             });
@@ -1798,25 +1945,28 @@
             closeSettings();
         }
 
-        // --- Gestão de Premiações ---
-        let currentPrizes = [];
+        // --- Gestão de Rodadas ---
+        let currentRodadas = [];
+        let enginePremiosStatus = []; // Status em tempo real do motor
+        let tempPremios = []; // Regras temporárias antes de salvar o prêmio
         let shapeIndices = new Set();
 
-        function openPrizes() {
+        function openRodadas() {
             // Solicita config atualizado para garantir tipo_grade correto
             bingoSocket.send('get_draw_config');
-            document.getElementById('modal-prizes').style.display = 'flex';
-            bingoSocket.send('get_prizes');
+            document.getElementById('modal-rodadas').style.display = 'flex';
+            bingoSocket.send('get_rodadas');
         }
 
-        function closePrizes() {
-            document.getElementById('modal-prizes').style.display = 'none';
+        function closeRodadas() {
+            document.getElementById('modal-rodadas').style.display = 'none';
         }
 
-        bingoSocket.on('prizes_list', (data) => {
-            currentPrizes = data.prizes || [];
-            renderPrizeList();
+        bingoSocket.on('rodadas_list', (data) => {
+            currentRodadas = data.rodadas || [];
+            renderRodadaList();
         });
+
 
         bingoSocket.on('draw_number_error', (data) => {
             isDrawing = false; // DESBLOQUEIA em caso de erro
@@ -1832,11 +1982,24 @@
             console.error("Erro de sorteio:", data.message);
         });
 
-        bingoSocket.on('add_prize_error', (data) => {
-            alert("Erro ao adicionar prêmio: " + data.message);
+        bingoSocket.on('add_rodada_error', (data) => {
+            alert("Erro ao adicionar rodada: " + data.message);
         });
 
-        bingoSocket.on('prize_status_updated', (data) => {
+        bingoSocket.on('rodada_added', (data) => {
+            console.log("Rodada adicionada com sucesso!");
+            // Limpa form apenas no sucesso
+            document.getElementById('prz-nome').value = '';
+            tempPremios = [];
+            renderSubPrizesTable();
+            clearShapeGrid();
+
+            // Força atualização da lista
+            bingoSocket.send('get_rodadas');
+            alert("Rodada adicionada com sucesso!");
+        });
+
+        bingoSocket.on('premio_status_updated', (data) => {
             console.log("Status do prêmio atualizado:", data);
             // Sincroniza estado final se necessário
             if (data.isFinished !== undefined) {
@@ -1845,38 +2008,61 @@
             }
         });
 
-        function renderPrizeList() {
-            const container = document.getElementById('prizes-list-container');
-            if (!currentPrizes.length) {
-                container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Nenhum prêmio cadastrado.</div>';
+        function renderRodadaList() {
+            const container = document.getElementById('rodadas-list-container');
+            if (!currentRodadas.length) {
+                container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:1rem;">Nenhuma rodada cadastrada.</div>';
                 return;
             }
-            container.innerHTML = currentPrizes.map(p => {
-                const isRealizada = p.realizada;
+
+            container.innerHTML = currentRodadas.map(r => {
+                let subHtml = `<div style="margin-left: 1.5rem; margin-top: 0.5rem; font-size: 0.8rem;">`;
+
+                r.premios.forEach(premio => {
+                    // Tenta encontrar o status em tempo real no motor
+                    const status = enginePremiosStatus.find(s => s.id === premio.id) || { realizada: premio.realizada };
+                    const isRealizada = status.realizada;
+
+                    subHtml += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span style="color: ${isRealizada ? 'var(--success)' : '#fff'}">
+                                ${isRealizada ? '✅' : '⏳'} ${premio.tipo.toUpperCase()}
+                                ${premio.descricao ? `<span style="color:rgba(255,255,255,0.6); font-weight:400; margin-left:5px;">- ${premio.descricao}</span>` : ''}
+                            </span>
+                            <div style="display:flex; gap:0.3rem;">
+                                ${session.isOperator ? `
+                                    <button onclick="finalizePremio(${premio.id}, ${!isRealizada})" 
+                                            style="background:${isRealizada ? 'var(--text-secondary)' : 'var(--success)'}; border:none; color:#fff; padding:2px 6px; border-radius:3px; font-size:0.6rem; cursor:pointer;">
+                                        ${isRealizada ? 'Reabrir' : 'Finalizar'}
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                subHtml += `</div>`;
+
                 return `
-                <div class="prize-item" style="${isRealizada ? 'opacity: 0.6; border-left: 4px solid var(--success);' : 'border-left: 4px solid var(--warning);'}">
-                    <div class="prize-info">
-                        <span class="prize-name">${p.nome} ${isRealizada ? '✅' : ''}</span>
-                        <span class="prize-type">${p.tipo}</span>
-                    </div>
-                    <div style="display:flex; gap:0.5rem;">
+                <div class="prize-group-item" style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 10px; margin-bottom: 10px; border-left: 4px solid var(--primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div class="prize-info">
+                            <span class="prize-name" style="font-weight: 600;">${r.nome}</span>
+                            <span class="prize-type" style="font-size: 0.7rem;">Base: ${r.base_id} | Grade: ${r.tipo_grade}</span>
+                        </div>
                         ${session.isOperator ? `
-                            <button onclick="finalizePrize(${p.id}, ${!isRealizada})" 
-                                    style="background:${isRealizada ? 'var(--text-secondary)' : 'var(--success)'}; border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">
-                                ${isRealizada ? 'Reabrir' : 'Finalizar'}
-                            </button>
-                            <button onclick="deletePrize(${p.id})" style="background:var(--danger); border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">Remover</button>
+                            <button onclick="deleteRodada(${r.id})" style="background:var(--danger); border:none; color:#fff; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; cursor:pointer;">Remover Rodada</button>
                         ` : ''}
                     </div>
+                    ${subHtml}
                 </div>
                 `;
             }).join('');
         }
 
-        function finalizePrize(prizeId, realizada) {
+        function finalizePremio(premioId, realizada) {
             const acao = realizada ? "finalizar" : "reabrir";
             if (confirm(`Deseja ${acao} este prêmio?`)) {
-                bingoSocket.send('finalize_prize', { prizeId, realizada });
+                bingoSocket.send('finalize_prize', { prizeId: premioId, realizada });
             }
         }
 
@@ -1884,11 +2070,18 @@
             const editor = document.getElementById('prz-shape-editor');
             if (tipo === 'forma') {
                 editor.style.display = 'block';
-                // Solicita config atualizado e depois desenha o grid
-                bingoSocket.send('get_draw_config');
-                createShapeGrid(); // Desenha imediatamente com o que temos
+                // Não solicita get_draw_config aqui para não resetar o select de base
+                createShapeGrid();
             } else {
                 editor.style.display = 'none';
+            }
+        }
+
+        function updateShapeGridFromBase() {
+            // Se o editor estiver visível, atualiza o grid ao mudar a base
+            const editor = document.getElementById('prz-shape-editor');
+            if (editor && editor.style.display !== 'none') {
+                createShapeGrid();
             }
         }
 
@@ -1896,19 +2089,68 @@
             const gridEl = document.getElementById('shape-grid');
             gridEl.innerHTML = '';
 
-            // Detecta dimensões baseado no tipo_grade (ex: 75x15 -> 15 números -> 5x3)
-            let cols = 5;
-            let rows = 5;
-            if (config.tipo_grade && config.tipo_grade.includes('x')) {
-                const total = parseInt(config.tipo_grade.split('x')[1]);
-                rows = total / cols;
+            // Obtém a base selecionada
+            const baseSelect = document.getElementById('prz-base');
+            let tipoGrade = "5x5"; // Default
+
+            if (baseSelect && baseSelect.value) {
+                const baseId = parseInt(baseSelect.value);
+                const baseObj = basesCache.find(b => b.id === baseId);
+                if (baseObj && baseObj.tipo) {
+                    tipoGrade = baseObj.tipo;
+                }
+            } else if (config.tipo_grade) {
+                // Fallback para config global se nada selecionado (ou edição antiga)
+                tipoGrade = config.tipo_grade;
             }
 
-            console.log("Desenhando editor de formas para grade:", config.tipo_grade || "5x5", "Rows:", rows);
+            // Detecta dimensões baseado no tipo_grade (ex: 75x15 -> 15 números -> 5x3 or 5x5?)
+            // PADRÃO DE NOMENCLATURA: "NOMExNUMEROS" ou explícito "LINHASxCOLUNAS"?
+            // Usualmente o sistema usa "75x15" ou "90x15". O padrão visual é 5 colunas.
+            // Se for 30x5 -> 5 números. 5 colunas, 1 linha?
+            // Vamos assumir 5 colunas fixas para bingo padrão.
+
+            let cols = 5;
+            let rows = 5;
+
+            // Extrai número total de células do tipo (ex: 75x15 -> 15)
+            // Se o tipo for algo como "CartelaCheia", assume 5x5 (25).
+            // Se tiver 'x' (ex: 30x5), tenta parsear.
+
+            if (tipoGrade && tipoGrade.includes('BINGO')) {
+                // Ex: "Base 75x15 BINGO" -> extrai 15
+                const match = tipoGrade.match(/x(\d+)/);
+                if (match) {
+                    const total = parseInt(match[1]);
+                    rows = Math.ceil(total / cols);
+                }
+            } else if (tipoGrade && tipoGrade.includes('x')) {
+                // Ex: "30x5" -> split
+                const parts = tipoGrade.split('x');
+                if (parts.length === 2 && !isNaN(parseInt(parts[1]))) {
+                    const total = parseInt(parts[1]); // O segundo número costuma ser a qtd de células na cartela
+                    rows = Math.ceil(total / cols);
+                }
+            } else {
+                // Tenta achar números na string
+                const match = tipoGrade.match(/(\d+)$/);
+                if (match) {
+                    const total = parseInt(match[1]);
+                    rows = Math.ceil(total / cols);
+                }
+            }
+
+            // Proteção para garantir grid válido
+            if (rows < 1) rows = 5;
+
+            console.log("Desenhando editor de formas. Base:", tipoGrade, "Rows:", rows);
 
             // Ajusta o CSS do grid dinamicamente
             gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
             gridEl.style.width = 'fit-content';
+
+            // Limpa indices se o tamanho mudar drasticamente? 
+            // Melhor não limpar automaticamente para não frustrar, mas indices fora do range serão ignorados no visual
 
             const totalCells = cols * rows;
             for (let i = 0; i < totalCells; i++) {
@@ -1918,6 +2160,7 @@
 
                 const cell = document.createElement('div');
                 cell.className = 'shape-cell';
+                // Usa columnMajorIdx para compatibilidade com o backend que espera indices baseados em coluna (padrão do BingoGameEngine)
                 if (shapeIndices.has(columnMajorIdx)) cell.classList.add('active');
 
                 cell.onclick = () => {
@@ -1934,35 +2177,82 @@
             createShapeGrid();
         }
 
-        function saveNewPrize() {
-            const nomeInput = document.getElementById('prz-nome');
-            const nome = nomeInput.value.trim();
+        // Funções para gerenciar Sub-Prêmios temporariamente antes de salvar
+        function adicionarRegraALista() {
             const tipo = document.getElementById('prz-tipo').value;
-            if (!nome) return alert("Por favor, informe a descrição do prêmio.");
-
-            // Validação de nomes duplicados
-            const duplicado = currentPrizes.find(p => p.nome.toLowerCase() === nome.toLowerCase());
-            if (duplicado) {
-                return alert(`Já existe um prêmio cadastrado com o nome "${nome}". Por favor, escolha um nome diferente.`);
-            }
-
+            const descInput = document.getElementById('prz-desc-rule');
+            const descricao = descInput.value.trim();
             const padrao = (tipo === 'forma') ? Array.from(shapeIndices) : [];
 
-            bingoSocket.send('add_prize', {
-                nome, tipo, padrao, ordem: currentPrizes.length + 1
-            });
+            if (tipo === 'forma' && padrao.length === 0) {
+                return alert("Por favor, desenhe uma forma na grade.");
+            }
 
-            // Limpa form e reset gráfico
-            document.getElementById('prz-nome').value = '';
-            clearShapeGrid(); // Limpa visualmente a grade e os índices internos
-            alert("Prêmio adicionado com sucesso!");
-            bingoSocket.send('get_prizes');
+            tempPremios.push({ tipo, descricao, padrao });
+            renderSubPrizesTable();
+
+            // Reset
+            descInput.value = '';
+            // Reset do editor se for forma
+            if (tipo === 'forma') {
+                clearShapeGrid();
+            }
         }
 
-        function deletePrize(id) {
-            if (confirm("Deseja remover este prêmio?")) {
-                bingoSocket.send('delete_prize', { id });
-                setTimeout(() => bingoSocket.send('get_prizes'), 500);
+        function removerRegraDaLista(index) {
+            tempPremios.splice(index, 1);
+            renderSubPrizesTable();
+        }
+
+        function renderSubPrizesTable() {
+            const tbody = document.getElementById('sub-prizes-tbody');
+            tbody.innerHTML = tempPremios.map((s, i) => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 5px; color: var(--primary); text-transform: uppercase; font-weight: 600;">
+                        ${s.tipo}
+                        ${s.descricao ? `<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:400; text-transform:none;">${s.descricao}</div>` : ''}
+                    </td>
+                    <td style="padding: 5px;">${s.tipo === 'forma' ? s.padrao.length + ' células' : '-'}</td>
+                    <td style="padding: 5px; text-align: right;">
+                        <button onclick="removerRegraDaLista(${i})" style="background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;">&times;</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function saveFullRodada() {
+            const nomeInput = document.getElementById('prz-nome');
+            const nome = nomeInput.value.trim();
+            const baseId = parseInt(document.getElementById('prz-base').value);
+            const numChances = parseInt(document.getElementById('prz-chances').value);
+
+            if (!nome) return alert("Por favor, informe a descrição da rodada.");
+            if (isNaN(baseId)) return alert("Por favor, selecione uma base de cartelas.");
+            if (tempPremios.length === 0) return alert("Adicione pelo menos um prêmio (regra) à lista.");
+
+            console.log("[DEBUG] Enviando add_rodada:", {
+                nome,
+                base_id: baseId,
+                configuracoes: { numChances: numChances },
+                premios: tempPremios,
+                ordem: currentRodadas.length + 1
+            });
+
+            bingoSocket.send('add_rodada', {
+                nome,
+                base_id: baseId,
+                configuracoes: { numChances: numChances },
+                premios: tempPremios,
+                ordem: currentRodadas.length + 1
+            });
+
+            console.log("Solicitação de nova rodada enviada:", nome);
+        }
+
+        function deleteRodada(id) {
+            if (confirm("Deseja remover esta rodada?")) {
+                bingoSocket.send('delete_rodada', { id });
+                setTimeout(() => bingoSocket.send('get_rodadas'), 500);
             }
         }
 
