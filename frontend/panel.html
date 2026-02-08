@@ -929,7 +929,7 @@
                 <div
                     style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">
                     Última Bola</div>
-                <div id="current-ball" class="big-ball">--</div>
+                <div id="current-ball" class="big-ball">☺</div>
                 <div id="sorteio-label" class="sorteio-id-box">PROVA #001</div>
                 <div id="playing-count"
                     style="margin-top: 0.5rem; color: var(--success); font-size: 0.9rem; font-weight: 600;">0 CARTELAS
@@ -1316,7 +1316,7 @@
                 const last = drawnNumbers[drawnNumbers.length - 1];
                 elCurrentBall.textContent = last < 10 ? '0' + last : last;
             } else {
-                elCurrentBall.textContent = "--";
+                elCurrentBall.textContent = "☺";
             }
 
             // Sincroniza Ganhadores
@@ -1834,7 +1834,7 @@
         function resetBoard() {
             drawnNumbers = [];
             elHistory.innerHTML = "";
-            elCurrentBall.textContent = "--";
+            elCurrentBall.textContent = "☺";
             elCurrentBall.classList.remove('animate-pop-in');
 
             lastWinners = [];
